@@ -5,7 +5,7 @@ use axum::{
     routing::get,
     Router,
 };
-use log::{info, error};
+use log::{info};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
@@ -16,6 +16,8 @@ use tokio::sync::RwLock;
 pub struct DashboardState {
     pub analytics_data: Arc<RwLock<HashMap<String, serde_json::Value>>>,
     pub health_data: Arc<RwLock<HashMap<String, bool>>>,
+    pub points_data: Arc<RwLock<HashMap<String, serde_json::Value>>>,
+    pub leaderboard_data: Arc<RwLock<Vec<serde_json::Value>>>,
 }
 
 impl DashboardState {
@@ -23,6 +25,8 @@ impl DashboardState {
         Self {
             analytics_data: Arc::new(RwLock::new(HashMap::new())),
             health_data: Arc::new(RwLock::new(HashMap::new())),
+            points_data: Arc::new(RwLock::new(HashMap::new())),
+            leaderboard_data: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -32,6 +36,14 @@ impl DashboardState {
 
     pub async fn update_health(&self, data: HashMap<String, bool>) {
         *self.health_data.write().await = data;
+    }
+
+    pub async fn update_points(&self, data: HashMap<String, serde_json::Value>) {
+        *self.points_data.write().await = data;
+    }
+
+    pub async fn update_leaderboard(&self, data: Vec<serde_json::Value>) {
+        *self.leaderboard_data.write().await = data;
     }
 }
 
@@ -74,6 +86,8 @@ impl WebDashboard {
             .route("/api/analytics", get(get_analytics))
             .route("/api/health", get(get_health))
             .route("/api/status", get(get_status))
+            .route("/api/points", get(get_points_stats))
+            .route("/api/leaderboard", get(get_leaderboard))
             
             // Enable CORS for API endpoints
             .layer(CorsLayer::permissive())
@@ -107,6 +121,22 @@ async fn get_status(State(_state): State<DashboardState>) -> Result<Json<serde_j
             "timestamp": chrono::Utc::now(),
             "version": env!("CARGO_PKG_VERSION")
         }
+    })))
+}
+
+async fn get_points_stats(State(state): State<DashboardState>) -> Result<Json<serde_json::Value>, StatusCode> {
+    let points = state.points_data.read().await.clone();
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "data": points
+    })))
+}
+
+async fn get_leaderboard(State(state): State<DashboardState>) -> Result<Json<serde_json::Value>, StatusCode> {
+    let leaderboard = state.leaderboard_data.read().await.clone();
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "data": leaderboard
     })))
 }
 

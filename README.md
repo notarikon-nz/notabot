@@ -108,7 +108,7 @@ RUST_LOG=info
 
 1. **Create Bot Account**: Create a dedicated Twitch account for your bot
 2. **Get OAuth Token**: 
-   - Visit [Twitch Token Generator](https://twitchapps.com/tmi/)
+   - Visit [Twitch Token Generator](https://twitchtokengenerator.com/)
    - Login with your bot account
    - Copy the OAuth token (it will start with `oauth:`)
 3. **Configure Channels**: List the channels you want the bot to join (comma-separated, without the # symbol)

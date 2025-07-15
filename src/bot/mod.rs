@@ -11,11 +11,19 @@ pub mod commands;
 pub mod timers;
 pub mod moderation;
 pub mod analytics;
+pub mod points;
+pub mod points_commands;
+pub mod achievements;
+pub mod achievement_commands;
 
 use commands::CommandSystem;
 use timers::TimerSystem;
 use moderation::ModerationSystem;
 use analytics::{AnalyticsSystem, AnalyticsEvent};
+use points::PointsSystem;
+use points_commands::PointsCommands;
+use achievements::AchievementSystem;
+use achievement_commands::AchievementCommands;
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
@@ -24,16 +32,29 @@ pub struct ChatBot {
     timer_system: TimerSystem,
     moderation_system: Arc<ModerationSystem>,
     analytics_system: Arc<RwLock<AnalyticsSystem>>,
+    points_system: Arc<PointsSystem>,
+    points_commands: Arc<PointsCommands>,
+    achievement_system: Arc<AchievementSystem>,
+    achievement_commands: Arc<AchievementCommands>,
 }
 
 impl ChatBot {
     pub fn new() -> Self {
+        let points_system = Arc::new(PointsSystem::new());
+        let points_commands = Arc::new(PointsCommands::new(Arc::clone(&points_system)));
+        let achievement_system = Arc::new(AchievementSystem::new());
+        let achievement_commands = Arc::new(AchievementCommands::new(Arc::clone(&achievement_system)));
+        
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
             command_system: Arc::new(CommandSystem::new()),
             timer_system: TimerSystem::new(),
             moderation_system: Arc::new(ModerationSystem::new()),
             analytics_system: Arc::new(RwLock::new(AnalyticsSystem::new())),
+            points_system,
+            points_commands,
+            achievement_system,
+            achievement_commands,
         }
     }
 
@@ -177,6 +198,41 @@ impl ChatBot {
         Ok(())
     }
 
+    /// Get achievement statistics
+    pub async fn get_achievement_stats(&self) -> HashMap<String, serde_json::Value> {
+        self.achievement_system.get_statistics().await
+    }
+
+    /// Get user achievements
+    pub async fn get_user_achievements(&self, user_id: &str) -> Option<achievements::UserAchievements> {
+        self.achievement_system.get_user_achievements(user_id).await
+    }
+
+    /// Get achievement leaderboard
+    pub async fn get_achievement_leaderboard(&self, limit: usize) -> Vec<(String, i64, usize)> {
+        self.achievement_system.get_achievement_leaderboard(limit).await
+    }
+
+    /// Get user points
+    pub async fn get_user_points(&self, platform: &str, username: &str) -> Option<points::UserPoints> {
+        self.points_system.get_user_points(platform, username).await
+    }
+
+    /// Add points to user (admin function)
+    pub async fn add_user_points(&self, platform: &str, username: &str, amount: i64, reason: &str) -> Result<bool> {
+        self.points_system.add_points(platform, username, amount, reason).await
+    }
+
+    /// Get points leaderboard
+    pub async fn get_points_leaderboard(&self, limit: usize) -> Vec<points::UserPoints> {
+        self.points_system.get_leaderboard(limit).await
+    }
+
+    /// Get points system statistics
+    pub async fn get_points_stats(&self) -> HashMap<String, serde_json::Value> {
+        self.points_system.get_statistics().await
+    }
+
     /// Get analytics data
     pub async fn get_analytics(&self) -> HashMap<String, serde_json::Value> {
         self.analytics_system.read().await.get_analytics().await
@@ -191,6 +247,12 @@ impl ChatBot {
             let mut analytics_guard = self.analytics_system.write().await;
             analytics_guard.start_analytics_processor().await;
         }
+
+        // Start points system
+        self.points_system.start().await?;
+
+        // Initialize achievement system
+        self.achievement_system.initialize_default_achievements().await;
 
         // Collect message receivers
         let mut receivers = Vec::new();
@@ -285,6 +347,10 @@ impl ChatBot {
             let command_system = Arc::clone(&command_system);
             let moderation_system = Arc::clone(&moderation_system);
             let analytics_sender = Arc::clone(&analytics_sender);
+            let points_system = Arc::clone(&self.points_system);
+            let points_commands = Arc::clone(&self.points_commands);
+            let achievement_system = Arc::clone(&self.achievement_system);
+            let achievement_commands = Arc::clone(&self.achievement_commands);
             
             tokio::spawn(async move {
                 loop {
@@ -295,6 +361,29 @@ impl ChatBot {
                             // Record message in analytics
                             if let Err(e) = analytics_sender.send(AnalyticsEvent::MessageReceived(message.clone())).await {
                                 error!("Failed to send analytics message event: {}", e);
+                            }
+                            
+                            // Process message for points (always, even if spam)
+                            if let Err(e) = points_system.process_message(&message).await {
+                                error!("Failed to process points for message: {}", e);
+                            }
+                            
+                            // Check for achievement unlocks after processing points
+                            if let Some(user_points) = points_system.get_user_points(&message.platform, &message.username).await {
+                                let unlocked_achievements = achievement_system.check_achievements(&user_points).await;
+                                
+                                for achievement in unlocked_achievements {
+                                    // Award achievement bonus points
+                                    if let Err(e) = points_system.add_points(&message.platform, &message.username, 
+                                                                           achievement.reward_points, &format!("Achievement: {}", achievement.name)).await {
+                                        error!("Failed to award achievement points: {}", e);
+                                    }
+                                    
+                                    // Announce the achievement
+                                    if let Err(e) = achievement_commands.announce_achievement(&achievement, &message.username, &message, &response_tx).await {
+                                        error!("Failed to announce achievement: {}", e);
+                                    }
+                                }
                             }
                             
                             // Update user message history for moderation
@@ -318,13 +407,69 @@ impl ChatBot {
                                 continue; // Don't process commands for flagged messages
                             }
                             
-                            // Process commands
+                            // Check for points commands first
+                            let prefix = command_system.command_prefix.read().await.clone();
+                            if message.content.starts_with(&prefix) {
+                                let content_without_prefix = &message.content[prefix.len()..];
+                                let parts: Vec<&str> = content_without_prefix.split_whitespace().collect();
+                                
+                                if !parts.is_empty() {
+                                    let command_name = parts[0].to_lowercase();
+                                    let args: Vec<&str> = parts[1..].to_vec();
+                                    
+                                    // Try achievement commands first
+                                    match achievement_commands.process_command(&command_name, &args, &message, &response_tx).await {
+                                        Ok(true) => {
+                                            // Achievement command was handled
+                                            continue;
+                                        }
+                                        Ok(false) => {
+                                            // Not an achievement command, try points commands
+                                        }
+                                        Err(e) => {
+                                            error!("Error processing achievement command: {}", e);
+                                        }
+                                    }
+                                    
+                                    // Try points commands
+                                    match points_commands.process_command(&command_name, &args, &message, &response_tx).await {
+                                        Ok(true) => {
+                                            // Points command was handled
+                                            if let Err(e) = points_system.process_command(&message, &command_name).await {
+                                                error!("Failed to process command points: {}", e);
+                                            }
+                                            continue;
+                                        }
+                                        Ok(false) => {
+                                            // Not a points command, continue to regular commands
+                                        }
+                                        Err(e) => {
+                                            error!("Error processing points command: {}", e);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Process regular commands
                             if let Err(e) = command_system.process_message(
                                 message.clone(), 
                                 &response_tx,
                                 Some(&analytics_command_tx)
                             ).await {
                                 error!("Failed to process command: {}", e);
+                            } else {
+                                // Award points for command usage
+                                if message.content.starts_with(&prefix) {
+                                    let content_without_prefix = &message.content[prefix.len()..];
+                                    let parts: Vec<&str> = content_without_prefix.split_whitespace().collect();
+                                    
+                                    if !parts.is_empty() {
+                                        let command_name = parts[0].to_lowercase();
+                                        if let Err(e) = points_system.process_command(&message, &command_name).await {
+                                            error!("Failed to process command points: {}", e);
+                                        }
+                                    }
+                                }
                             }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {

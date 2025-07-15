@@ -49,7 +49,11 @@ pub mod web;
 // Re-export commonly used items
 pub mod prelude {
     pub use crate::bot::ChatBot;
-    pub use crate::platforms::{PlatformConnection, twitch::{TwitchConnection, TwitchConfig}};
+    pub use crate::platforms::{
+        PlatformConnection, 
+        twitch::{TwitchConnection, TwitchConfig},
+        youtube::{YouTubeConnection, YouTubeConfig},
+    };
     pub use crate::types::{
         ChatMessage, BotCommand, BotTimer, SpamFilterType, SpamFilter, 
         ModerationAction, UserMessageHistory

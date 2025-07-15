@@ -5,6 +5,7 @@ use tokio::sync::broadcast;
 use crate::types::ChatMessage;
 
 pub mod twitch;
+pub mod youtube;
 
 /// Trait defining the interface all platform connections must implement
 #[async_trait]
