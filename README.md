@@ -18,7 +18,6 @@ A high-performance, memory-efficient chat bot framework written in Rust, designe
 - **Real-time Analytics**: Comprehensive user statistics and behavior tracking
 - **Intelligent Spam Protection**: 7+ filter types with machine learning capabilities
 - **Multi-Platform Native**: Twitch + YouTube Live Chat with unified management
-- **Web Dashboard**: Real-time monitoring and management interface
 - **Variable Substitution**: Dynamic responses with user context and platform awareness
 
 ### **Developer Experience**
@@ -242,7 +241,7 @@ impl PlatformConnection for DiscordConnection {
 - [x] Advanced points economy with achievements
 - [x] Intelligent spam protection with 7+ filters
 - [x] Real-time web dashboard with analytics
-- [x]] Comprehensive command system with variables
+- [x] Comprehensive command system with variables
 
 ### Version 1.4 (Q2 2024)
 - [ ] Discord integration
