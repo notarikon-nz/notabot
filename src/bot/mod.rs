@@ -1,3 +1,5 @@
+// src/bot/mod.rs - Complete enhanced bot integration with filter commands
+
 use anyhow::Result;
 use log::{error, info, warn};
 use std::collections::HashMap;
@@ -5,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 
 use crate::platforms::PlatformConnection;
-use crate::types::{ChatMessage, SpamFilterType};
+use crate::types::{ChatMessage, SpamFilterType, ExemptionLevel, ModerationEscalation, ModerationAction};
 
 pub mod commands;
 pub mod timers;
@@ -15,6 +17,7 @@ pub mod points;
 pub mod points_commands;
 pub mod achievements;
 pub mod achievement_commands;
+pub mod filter_commands; // NEW
 
 use commands::CommandSystem;
 use timers::TimerSystem;
@@ -24,6 +27,7 @@ use points::PointsSystem;
 use points_commands::PointsCommands;
 use achievements::AchievementSystem;
 use achievement_commands::AchievementCommands;
+use filter_commands::FilterCommands; // NEW
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
@@ -36,6 +40,7 @@ pub struct ChatBot {
     points_commands: Arc<PointsCommands>,
     achievement_system: Arc<AchievementSystem>,
     achievement_commands: Arc<AchievementCommands>,
+    filter_commands: Arc<FilterCommands>, // NEW
 }
 
 impl ChatBot {
@@ -44,17 +49,20 @@ impl ChatBot {
         let points_commands = Arc::new(PointsCommands::new(Arc::clone(&points_system)));
         let achievement_system = Arc::new(AchievementSystem::new());
         let achievement_commands = Arc::new(AchievementCommands::new(Arc::clone(&achievement_system)));
+        let moderation_system = Arc::new(ModerationSystem::new());
+        let filter_commands = Arc::new(FilterCommands::new(Arc::clone(&moderation_system))); // NEW
         
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
             command_system: Arc::new(CommandSystem::new()),
             timer_system: TimerSystem::new(),
-            moderation_system: Arc::new(ModerationSystem::new()),
+            moderation_system,
             analytics_system: Arc::new(RwLock::new(AnalyticsSystem::new())),
             points_system,
             points_commands,
             achievement_system,
             achievement_commands,
+            filter_commands, // NEW
         }
     }
 
@@ -107,12 +115,12 @@ impl ChatBot {
         self.timer_system.get_timer_stats().await
     }
 
-    /// Add a spam filter to the bot
+    /// Add a spam filter to the bot (legacy method for backward compatibility)
     pub async fn add_spam_filter(&self, filter_type: SpamFilterType) -> Result<()> {
         self.moderation_system.add_spam_filter(filter_type).await
     }
 
-    /// Add a spam filter with custom configuration
+    /// Add a spam filter with custom configuration (legacy method)
     pub async fn add_spam_filter_advanced(
         &self,
         filter_type: SpamFilterType,
@@ -121,14 +129,112 @@ impl ChatBot {
         mod_exempt: bool,
         subscriber_exempt: bool,
     ) -> Result<()> {
+        // Convert old parameters to new escalation system
+        let escalation = ModerationEscalation {
+            first_offense: ModerationAction::WarnUser { 
+                message: warning_message.clone().unwrap_or_else(|| "Please follow chat rules (first warning)".to_string())
+            },
+            repeat_offense: ModerationAction::TimeoutUser { duration_seconds: timeout_duration },
+            offense_window_seconds: 3600,
+        };
+
+        let exemption_level = if mod_exempt && subscriber_exempt {
+            ExemptionLevel::Subscriber
+        } else if mod_exempt {
+            ExemptionLevel::Moderator
+        } else {
+            ExemptionLevel::None
+        };
+
+        let filter_name = format!("{}_{}", 
+            Self::generate_filter_name(&filter_type), 
+            chrono::Utc::now().timestamp()
+        );
+
         self.moderation_system.add_spam_filter_advanced(
-            filter_type, timeout_duration, warning_message, mod_exempt, subscriber_exempt
+            filter_name,
+            filter_type,
+            escalation,
+            exemption_level,
+            false, // silent_mode
+            warning_message,
+        ).await
+    }
+
+    /// Add a spam filter with enhanced configuration (NEW)
+    pub async fn add_spam_filter_enhanced(
+        &self,
+        name: String,
+        filter_type: SpamFilterType,
+        timeout_seconds: u64,
+        exemption_level: ExemptionLevel,
+        custom_message: Option<String>,
+        silent_mode: bool,
+    ) -> Result<()> {
+        let escalation = ModerationEscalation {
+            first_offense: ModerationAction::WarnUser { 
+                message: custom_message.clone().unwrap_or_else(|| "Please follow chat rules (first warning)".to_string())
+            },
+            repeat_offense: ModerationAction::TimeoutUser { duration_seconds: timeout_seconds },
+            offense_window_seconds: 3600,
+        };
+
+        self.moderation_system.add_spam_filter_advanced(
+            name,
+            filter_type,
+            escalation,
+            exemption_level,
+            silent_mode,
+            custom_message,
+        ).await
+    }
+
+    /// Add blacklist filter (NightBot parity)
+    pub async fn add_blacklist_filter(
+        &self,
+        patterns: Vec<String>,
+        timeout_seconds: Option<u64>,
+        exemption_level: Option<ExemptionLevel>,
+        case_sensitive: Option<bool>,
+        whole_words_only: Option<bool>,
+        custom_message: Option<String>,
+    ) -> Result<()> {
+        let filter_name = format!("blacklist_{}", chrono::Utc::now().timestamp());
+        
+        self.moderation_system.add_blacklist_filter(
+            filter_name,
+            patterns,
+            case_sensitive.unwrap_or(false),
+            whole_words_only.unwrap_or(false),
+            exemption_level.unwrap_or(ExemptionLevel::Moderator),
+            timeout_seconds.unwrap_or(600),
+            custom_message,
         ).await
     }
 
     /// Enable or disable all spam filters
     pub async fn set_spam_protection_enabled(&self, enabled: bool) {
         self.moderation_system.set_spam_protection_enabled(enabled).await;
+    }
+
+    /// Enable/disable specific filter
+    pub async fn set_filter_enabled(&self, filter_name: &str, enabled: bool) -> Result<()> {
+        self.moderation_system.set_filter_enabled(filter_name, enabled).await
+    }
+
+    /// Remove filter
+    pub async fn remove_filter(&self, filter_name: &str) -> Result<()> {
+        self.moderation_system.remove_filter(filter_name).await
+    }
+
+    /// List all filters
+    pub async fn list_filters(&self) -> Vec<(String, bool)> {
+        self.moderation_system.list_filters().await
+    }
+
+    /// Get filter statistics
+    pub async fn get_filter_stats(&self) -> HashMap<String, serde_json::Value> {
+        self.moderation_system.get_filter_stats().await
     }
 
     /// Clear message history for all users (useful for cleanup)
@@ -286,7 +392,7 @@ impl ChatBot {
         Ok(())
     }
 
-    /// Process incoming messages and handle commands/moderation
+    /// Process incoming messages with enhanced moderation
     async fn start_message_processor(&self, receivers: Vec<broadcast::Receiver<ChatMessage>>) -> Result<()> {
         let command_system = Arc::clone(&self.command_system);
         let moderation_system = Arc::clone(&self.moderation_system);
@@ -351,6 +457,7 @@ impl ChatBot {
             let points_commands = Arc::clone(&self.points_commands);
             let achievement_system = Arc::clone(&self.achievement_system);
             let achievement_commands = Arc::clone(&self.achievement_commands);
+            let filter_commands = Arc::clone(&self.filter_commands); // NEW
             
             tokio::spawn(async move {
                 loop {
@@ -389,8 +496,9 @@ impl ChatBot {
                             // Update user message history for moderation
                             moderation_system.update_user_history(&message).await;
                             
-                            // Check spam filters first
-                            if let Some(action) = moderation_system.check_spam_filters(&message).await {
+                            // Check spam filters first (ENHANCED with user points context)
+                            let user_points = points_system.get_user_points(&message.platform, &message.username).await;
+                            if let Some(action) = moderation_system.check_spam_filters(&message, user_points.as_ref()).await {
                                 warn!("Message flagged by spam filter: {} from {}", message.content, message.username);
                                 
                                 // Record spam in analytics
@@ -407,7 +515,7 @@ impl ChatBot {
                                 continue; // Don't process commands for flagged messages
                             }
                             
-                            // Check for points commands first
+                            // Check for commands
                             let prefix = command_system.command_prefix.read().await.clone();
                             if message.content.starts_with(&prefix) {
                                 let content_without_prefix = &message.content[prefix.len()..];
@@ -417,7 +525,21 @@ impl ChatBot {
                                     let command_name = parts[0].to_lowercase();
                                     let args: Vec<&str> = parts[1..].to_vec();
                                     
-                                    // Try achievement commands first
+                                    // Try filter commands first (NEW)
+                                    match filter_commands.process_command(&command_name, &args, &message, &response_tx).await {
+                                        Ok(true) => {
+                                            // Filter command was handled
+                                            continue;
+                                        }
+                                        Ok(false) => {
+                                            // Not a filter command, try achievement commands
+                                        }
+                                        Err(e) => {
+                                            error!("Error processing filter command: {}", e);
+                                        }
+                                    }
+                                    
+                                    // Try achievement commands
                                     match achievement_commands.process_command(&command_name, &args, &message, &response_tx).await {
                                         Ok(true) => {
                                             // Achievement command was handled
@@ -528,6 +650,12 @@ impl ChatBot {
         let commands = self.command_system.get_all_commands().await;
         stats.insert("total_commands".to_string(), serde_json::Value::Number(commands.len().into()));
         
+        // Get filter stats
+        let filter_stats = self.get_filter_stats().await;
+        stats.insert("filters".to_string(), serde_json::Value::Object(
+            filter_stats.into_iter().collect()
+        ));
+        
         Ok(serde_json::Value::Object(stats))
     }
 
@@ -561,6 +689,20 @@ impl ChatBot {
     /// Check if a command exists
     pub async fn command_exists(&self, command_name: &str) -> bool {
         self.command_system.command_exists(command_name).await
+    }
+
+    /// Generate a default filter name based on filter type
+    fn generate_filter_name(filter_type: &SpamFilterType) -> String {
+        match filter_type {
+            SpamFilterType::ExcessiveCaps { .. } => "excessive_caps".to_string(),
+            SpamFilterType::LinkBlocking { .. } => "link_blocking".to_string(),
+            SpamFilterType::RepeatedMessages { .. } => "repeated_messages".to_string(),
+            SpamFilterType::MessageLength { .. } => "message_length".to_string(),
+            SpamFilterType::ExcessiveEmotes { .. } => "excessive_emotes".to_string(),
+            SpamFilterType::SymbolSpam { .. } => "symbol_spam".to_string(),
+            SpamFilterType::RateLimit { .. } => "rate_limit".to_string(),
+            SpamFilterType::Blacklist { .. } => "blacklist".to_string(),
+        }
     }
 
     /// Gracefully shutdown all connections
