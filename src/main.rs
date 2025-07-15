@@ -1,14 +1,9 @@
-mod types;
-mod platforms;
-mod bot;
-
 use anyhow::{Context, Result};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::time::{sleep, Duration};
+use std::env;
 
-use bot::ChatBot;
-use platforms::twitch::{TwitchConnection, TwitchConfig};
-use types::SpamFilterType;
+use notabot::prelude::*;
 
 /// Example usage and main function
 #[tokio::main]
@@ -85,7 +80,7 @@ async fn main() -> Result<()> {
     ).await?;
     
     bot.add_timer("uptime_reminder".to_string(), 
-        "Thanks for watching! Bot uptime: $(count) posts 💖".to_string(), 
+        "Thanks for watching! Bot uptime: $(count) posts".to_string(), 
         1800 // Every 30 minutes
     ).await?;
 
@@ -100,8 +95,39 @@ async fn main() -> Result<()> {
 
     info!("Configured {} timers", 4);
 
-    // Start the bot with full integration
-    info!("Starting bot with all systems...");
+    // Check if web feature is enabled
+    #[cfg(feature = "web")]
+    info!("Web dashboard feature is ENABLED");
+    
+    #[cfg(not(feature = "web"))]
+    info!("❌ Web dashboard feature is DISABLED");
+
+    // Start the web dashboard FIRST (before bot systems)
+    let dashboard_port = env::var("DASHBOARD_PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse::<u16>()
+        .unwrap_or(3000);
+    
+    info!("Attempting to start web dashboard on port {}...", dashboard_port);
+    
+    // Test web dashboard creation
+    #[cfg(feature = "web")]
+    {
+        info!("Testing web dashboard creation...");
+        let _test_dashboard = notabot::web::WebDashboard::new();
+        info!("Web dashboard test creation successful");
+    }
+    
+    // Start the web dashboard
+    if let Err(e) = bot.start_web_dashboard(dashboard_port).await {
+        error!("Failed to start web dashboard: {}", e);
+        warn!("Continuing without web dashboard");
+    } else {
+        info!("Web dashboard startup initiated successfully");
+    }
+
+    // NOW start the bot systems
+    info!("Starting bot core systems...");
     if let Err(e) = bot.start().await {
         error!("Failed to start bot: {}", e);
         return Err(e);
@@ -112,6 +138,7 @@ async fn main() -> Result<()> {
     info!("Spam protection active");
     info!("Timer system running");
     info!("Command system ready");
+    info!("Web dashboard should be available at: http://localhost:{}", dashboard_port);
 
     // Run periodic health checks and stats logging
     let health_check_interval = Duration::from_secs(60);
@@ -142,7 +169,7 @@ async fn main() -> Result<()> {
             
             match bot.get_bot_stats().await {
                 Ok(stats) => {
-                    info!("📊 Bot Statistics: {}", serde_json::to_string_pretty(&stats).unwrap_or_else(|_| "Failed to serialize".to_string()));
+                    info!("Bot Statistics: {}", serde_json::to_string_pretty(&stats).unwrap_or_else(|_| "Failed to serialize".to_string()));
                 }
                 Err(e) => {
                     error!("Failed to get bot stats: {}", e);
@@ -153,7 +180,7 @@ async fn main() -> Result<()> {
             let timer_stats = bot.get_timer_stats().await;
             info!("⏰ Timer Status: {} active timers", timer_stats.len());
             for (name, (enabled, count, last_triggered)) in timer_stats {
-                let status = if enabled { "✅" } else { "❌" };
+                let status = if enabled { "+" } else { "-" };
                 let last = last_triggered
                     .map(|t| format!("{} ago", chrono::Utc::now().signed_duration_since(t).num_minutes()))
                     .unwrap_or_else(|| "never".to_string());
@@ -166,18 +193,6 @@ async fn main() -> Result<()> {
             info!("Bot running smoothly...");
         }
     }
-}
-
-// Graceful shutdown handler (for future use)
-async fn _setup_shutdown_handler(mut bot: ChatBot) {
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
-        info!("Received shutdown signal, gracefully stopping bot...");
-        if let Err(e) = bot.shutdown().await {
-            error!("Error during shutdown: {}", e);
-        }
-        std::process::exit(0);
-    });
 }
 
 #[cfg(test)]
@@ -234,16 +249,17 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_version_info() {
-        assert!(!env!("CARGO_PKG_VERSION").is_empty());
+    #[cfg(feature = "web")]
+    #[tokio::test]
+    async fn test_web_dashboard_creation() {
+        let _dashboard = notabot::web::WebDashboard::new();
+        
+        // Basic smoke test for web dashboard
+        assert!(true);
     }
 
     #[test]
-    fn test_analytics_creation() {
-        use crate::bot::analytics::AnalyticsSystem;
-        let _analytics = AnalyticsSystem::new();
-        // Basic smoke test for analytics system
-        assert!(true);
+    fn test_version_info() {
+        assert!(!env!("CARGO_PKG_VERSION").is_empty());
     }
 }

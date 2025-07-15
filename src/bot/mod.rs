@@ -115,6 +115,68 @@ impl ChatBot {
         self.moderation_system.clear_message_history().await;
     }
 
+    /// Start the web dashboard on the specified port
+    #[cfg(feature = "web")]
+    pub async fn start_web_dashboard(&self, port: u16) -> Result<()> {
+        info!("🌐 Starting web dashboard on port {}...", port);
+        
+        // Import web modules locally to avoid module resolution issues
+        use crate::web::{WebDashboard, DashboardState};
+        
+        // Create dashboard
+        let dashboard = WebDashboard::new();
+        let dashboard_state = dashboard.get_state();
+        
+        info!("📊 Setting up dashboard data updates...");
+        
+        // Start periodic data updates for the dashboard
+        let analytics_system = Arc::clone(&self.analytics_system);
+        let connections = Arc::clone(&self.connections);
+        let state_for_updates = dashboard_state.clone();
+        
+        tokio::spawn(async move {
+            info!("📈 Dashboard data updater started");
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                
+                // Update analytics data
+                let analytics = analytics_system.read().await.get_analytics().await;
+                state_for_updates.update_analytics(analytics).await;
+                
+                // Update health data
+                let mut health = HashMap::new();
+                {
+                    let connections_guard = connections.read().await;
+                    for (platform_name, connection) in connections_guard.iter() {
+                        let is_healthy = connection.is_connected().await;
+                        health.insert(platform_name.clone(), is_healthy);
+                    }
+                }
+                state_for_updates.update_health(health).await;
+            }
+        });
+        
+        info!("🚀 Starting web server...");
+        
+        // Start the web server in a separate task
+        tokio::spawn(async move {
+            if let Err(e) = dashboard.start_server(port).await {
+                error!("Web dashboard error: {}", e);
+            }
+        });
+        
+        info!("🌐 Web dashboard started on port {}", port);
+        Ok(())
+    }
+
+    /// Start the web dashboard (no-op when web feature is disabled)
+    #[cfg(not(feature = "web"))]
+    pub async fn start_web_dashboard(&self, _port: u16) -> Result<()> {
+        warn!("Web dashboard is disabled. Enable with --features web");
+        Ok(())
+    }
+
     /// Get analytics data
     pub async fn get_analytics(&self) -> HashMap<String, serde_json::Value> {
         self.analytics_system.read().await.get_analytics().await
@@ -157,6 +219,8 @@ impl ChatBot {
         self.timer_system.start_timer_system(Arc::clone(&self.connections)).await?;
 
         info!("Chat bot started successfully");
+        
+        // Return immediately - don't block here
         Ok(())
     }
 

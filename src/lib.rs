@@ -9,6 +9,7 @@
 //! - **Real-time Command Processing**: Instant response with variable substitution
 //! - **Advanced Spam Protection**: Intelligent filters with configurable actions
 //! - **Timer System**: Automated periodic messages with targeting
+//! - **Web Dashboard**: Real-time analytics and management interface
 //! - **High Performance**: Rust's performance with minimal memory footprint
 //! 
 //! ## Quick Start
@@ -31,6 +32,9 @@
 //!     // Start the bot
 //!     bot.start().await?;
 //!     
+//!     // Start web dashboard
+//!     bot.start_web_dashboard(3000).await?;
+//!     
 //!     Ok(())
 //! }
 //! ```
@@ -38,6 +42,9 @@
 pub mod types;
 pub mod platforms;
 pub mod bot;
+
+#[cfg(feature = "web")]
+pub mod web;
 
 // Re-export commonly used items
 pub mod prelude {
@@ -47,6 +54,8 @@ pub mod prelude {
         ChatMessage, BotCommand, BotTimer, SpamFilterType, SpamFilter, 
         ModerationAction, UserMessageHistory
     };
+    #[cfg(feature = "web")]
+    pub use crate::web::{WebDashboard, DashboardState};
     pub use anyhow::Result;
 }
 
