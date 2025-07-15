@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
     
     // Management commands for moderators
     bot.add_command("timers".to_string(), "Active timers: cross-platform, platform-specific messages running".to_string(), true, 10).await;
-    bot.add_command("stats".to_string(), "📊 Multi-platform bot analytics at http://localhost:3000".to_string(), true, 30).await;
+    bot.add_command("stats".to_string(), "Multi-platform bot analytics at http://localhost:3000".to_string(), true, 30).await;
     bot.add_command("platforms".to_string(), "Connected platforms: Check dashboard for status".to_string(), true, 30).await;
     bot.add_command("addpoints".to_string(), "Add points to user (mod only): !addpoints <user> <amount> [reason]".to_string(), true, 5).await;
     bot.add_command("pointstats".to_string(), "View points system statistics (mod only)".to_string(), true, 30).await;
@@ -86,7 +86,7 @@ async fn main() -> Result<()> {
     
     // Management commands for moderators
     bot.add_command("timers".to_string(), "Active timers: cross-platform, platform-specific messages running".to_string(), true, 10).await;
-    bot.add_command("stats".to_string(), "📊 Multi-platform bot analytics at http://localhost:3000".to_string(), true, 30).await;
+    bot.add_command("stats".to_string(), "Multi-platform bot analytics at http://localhost:3000".to_string(), true, 30).await;
     bot.add_command("platforms".to_string(), "Connected platforms: Check dashboard for status".to_string(), true, 30).await;
     bot.add_command("addpoints".to_string(), "Add points to user (mod only): !addpoints <user> <amount> [reason]".to_string(), true, 5).await;
     bot.add_command("pointstats".to_string(), "View points system statistics (mod only)".to_string(), true, 30).await;
