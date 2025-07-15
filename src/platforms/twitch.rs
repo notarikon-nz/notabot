@@ -84,12 +84,19 @@ impl TwitchConnection {
 
     /// Parse incoming Twitch IRC message into our standard format
     fn parse_twitch_message(&self, raw_message: &str) -> Option<ChatMessage> {
-        // Simplified Twitch IRC parsing - in production, use a proper IRC library
+        // Handle multiple messages in one websocket frame
         let lines: Vec<&str> = raw_message.split('\n').collect();
         
         for line in lines {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            
             if line.starts_with("@") && line.contains("PRIVMSG") {
-                return self.parse_privmsg(line);
+                if let Some(parsed) = self.parse_privmsg(line) {
+                    return Some(parsed);
+                }
             }
         }
         None
@@ -99,89 +106,95 @@ impl TwitchConnection {
         // Parse IRC tags and message
         // Format: @badges=...;display-name=...;mod=... :user!user@user.tmi.twitch.tv PRIVMSG #channel :message
         
-        let parts: Vec<&str> = line.splitn(2, " :").collect();
-        if parts.len() != 2 {
+        // Split the line into tags, prefix, command, and message
+        let mut parts = line.splitn(2, " :");
+        if parts.clone().count() < 2 {
+            debug!("Invalid PRIVMSG format: {}", line);
             return None;
         }
 
-        let (tags_and_prefix, message_content) = (parts[0], parts[1]);
-        let content_parts: Vec<&str> = message_content.splitn(2, " PRIVMSG ").collect();
-        if content_parts.len() != 2 {
-            return None;
-        }
+        let tags_and_prefix = parts.next()?;
+        let remaining = parts.next()?;
 
-        let channel_and_message: Vec<&str> = content_parts[1].splitn(2, " :").collect();
-        if channel_and_message.len() != 2 {
-            return None;
-        }
-
-        let channel = channel_and_message[0].trim_start_matches('#');
-        let message = channel_and_message[1];
-
-        // Extract username from prefix
-        let username = content_parts[0].split('!').next()?.to_string();
-
-        // Parse IRC tags for additional info
+        // Parse tags
         let mut display_name = None;
         let mut is_mod = false;
         let mut is_subscriber = false;
         let mut badges = Vec::new();
+        let mut username = String::new();
 
         if let Some(tags_part) = tags_and_prefix.strip_prefix('@') {
-            let tag_end = tags_part.find(' ').unwrap_or(tags_part.len());
-            let tags = &tags_part[..tag_end];
+            let space_pos = tags_part.find(' ').unwrap_or(tags_part.len());
+            let tags = &tags_part[..space_pos];
             
             for tag in tags.split(';') {
                 let tag_parts: Vec<&str> = tag.splitn(2, '=').collect();
                 if tag_parts.len() == 2 {
                     match tag_parts[0] {
-                        "display-name" => display_name = Some(tag_parts[1].to_string()),
+                        "display-name" => {
+                            if !tag_parts[1].is_empty() {
+                                display_name = Some(tag_parts[1].to_string());
+                            }
+                        }
                         "mod" => is_mod = tag_parts[1] == "1",
                         "subscriber" => is_subscriber = tag_parts[1] == "1",
                         "badges" => {
-                            badges = tag_parts[1].split(',')
-                                .filter_map(|b| b.split('/').next())
-                                .map(String::from)
-                                .collect();
+                            if !tag_parts[1].is_empty() {
+                                badges = tag_parts[1].split(',')
+                                    .filter_map(|b| b.split('/').next())
+                                    .map(String::from)
+                                    .collect();
+                            }
                         }
                         _ => {}
                     }
                 }
             }
+
+            // Extract username from the prefix part after tags
+            if space_pos < tags_part.len() {
+                let prefix_part = &tags_part[space_pos + 1..];
+                if let Some(user_part) = prefix_part.split('!').next() {
+                    username = user_part.to_string();
+                }
+            }
         }
+
+        // Parse the message part: "user!user@user.tmi.twitch.tv PRIVMSG #channel :actual message"
+        let message_parts: Vec<&str> = remaining.splitn(2, " PRIVMSG ").collect();
+        if message_parts.len() != 2 {
+            debug!("Could not parse PRIVMSG command: {}", remaining);
+            return None;
+        }
+
+        // If we didn't get username from tags, extract from prefix
+        if username.is_empty() {
+            if let Some(user_part) = message_parts[0].split('!').next() {
+                username = user_part.to_string();
+            }
+        }
+
+        let channel_and_message = message_parts[1];
+        let channel_parts: Vec<&str> = channel_and_message.splitn(2, " :").collect();
+        if channel_parts.len() != 2 {
+            debug!("Could not parse channel and message: {}", channel_and_message);
+            return None;
+        }
+
+        let channel = channel_parts[0].trim_start_matches('#');
+        let message_content = channel_parts[1];
 
         Some(ChatMessage {
             platform: "twitch".to_string(),
             channel: channel.to_string(),
             username,
             display_name,
-            content: message.to_string(),
+            content: message_content.to_string(),
             timestamp: chrono::Utc::now(),
             user_badges: badges,
             is_mod,
             is_subscriber,
         })
-    }
-
-    fn parse_message(text: &str) -> Option<ChatMessage> {
-        // Simplified parsing for the static context
-        if text.contains("PRIVMSG") && text.starts_with('@') {
-            // This is a basic fallback - in practice, you'd use the instance method
-            // or a proper IRC parsing library
-            Some(ChatMessage {
-                platform: "twitch".to_string(),
-                channel: "example".to_string(),
-                username: "user".to_string(),
-                display_name: None,
-                content: "message".to_string(),
-                timestamp: chrono::Utc::now(),
-                user_badges: Vec::new(),
-                is_mod: false,
-                is_subscriber: false,
-            })
-        } else {
-            None
-        }
     }
 }
 
@@ -199,7 +212,7 @@ impl PlatformConnection for TwitchConnection {
 
         let (write, read) = ws_stream.split();
 
-        // Store writer for sending messages and clone for PONG responses
+        // Store writer for sending messages
         let writer_arc = Arc::new(RwLock::new(write));
         let writer_for_pong = Arc::clone(&writer_arc);
         self.websocket_writer = Some(writer_arc);
@@ -236,8 +249,13 @@ impl PlatformConnection for TwitchConnection {
         let message_sender = tx;
         let is_connected = Arc::clone(&self.is_connected);
         
+        // Clone self reference for message parsing
+        let config = self.config.clone();
+        
         tokio::spawn(async move {
             let mut read = read;
+            info!("Twitch message reader started");
+            
             loop {
                 match read.next().await {
                     Some(Ok(Message::Text(text))) => {
@@ -254,7 +272,15 @@ impl PlatformConnection for TwitchConnection {
                         }
 
                         // Parse and broadcast chat messages
-                        if let Some(chat_msg) = Self::parse_message(&text) {
+                        let temp_connection = TwitchConnection {
+                            config: config.clone(),
+                            message_sender: None,
+                            websocket_writer: None,
+                            is_connected: Arc::new(RwLock::new(true)),
+                        };
+                        
+                        if let Some(chat_msg) = temp_connection.parse_twitch_message(&text) {
+                            info!("Parsed message from {}: {}", chat_msg.username, chat_msg.content);
                             if let Err(e) = message_sender.send(chat_msg) {
                                 warn!("Failed to broadcast message: {}", e);
                             }

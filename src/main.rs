@@ -1,25 +1,3 @@
-// This should be your Cargo.toml file:
-/*
-[package]
-name = "notabot"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tokio = { version = "1.0", features = ["full"] }
-tokio-tungstenite = "0.20"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-log = "0.4"
-env_logger = "0.10"
-anyhow = "1.0"
-async-trait = "0.1"
-url = "2.4"
-chrono = { version = "0.4", features = ["serde"] }
-futures-util = "0.3"
-dotenv = "0.15"
-*/
-
 mod types;
 mod platforms;
 mod bot;
@@ -56,54 +34,150 @@ async fn main() -> Result<()> {
     let twitch_connection = TwitchConnection::new(twitch_config);
     bot.add_connection(Box::new(twitch_connection)).await;
 
-    // Register some basic commands
+    // Register basic commands with argument support
     bot.add_command("hello".to_string(), "Hello there, $(user)! 👋".to_string(), false, 5).await;
     bot.add_command("uptime".to_string(), "Bot has been running in $(channel) for a while!".to_string(), false, 30).await;
     bot.add_command("modonly".to_string(), "This command is for moderators only, $(displayname)!".to_string(), true, 0).await;
     
-    // Timer management commands
+    // Commands with argument support
+    bot.add_command("echo".to_string(), "$(user) said: $(args)".to_string(), false, 10).await;
+    bot.add_command("greet".to_string(), "Hello $(1)! Welcome to $(channel)!".to_string(), false, 5).await;
+    
+    // Management commands for moderators
     bot.add_command("timers".to_string(), "Active timers: social (10m), subscribe (15m), uptime_reminder (30m)".to_string(), true, 10).await;
+    bot.add_command("stats".to_string(), "Check bot statistics and analytics!".to_string(), true, 30).await;
 
-    // Configure spam protection
+    // Configure comprehensive spam protection
+    info!("Configuring spam protection...");
+    
     bot.add_spam_filter(SpamFilterType::ExcessiveCaps { max_percentage: 70 }).await?;
     bot.add_spam_filter(SpamFilterType::LinkBlocking { 
         allow_mods: true, 
-        whitelist: vec!["discord.gg".to_string(), "twitter.com".to_string()] 
+        whitelist: vec!["discord.gg".to_string(), "twitter.com".to_string(), "youtube.com".to_string()] 
     }).await?;
-    bot.add_spam_filter(SpamFilterType::RepeatedMessages { max_repeats: 3, window_seconds: 300 }).await?;
+    
+    bot.add_spam_filter_advanced(
+        SpamFilterType::RepeatedMessages { max_repeats: 3, window_seconds: 300 },
+        1200, // 20 minute timeout
+        Some("Please don't repeat messages".to_string()),
+        true,  // mods exempt
+        false  // subscribers not exempt
+    ).await?;
+    
     bot.add_spam_filter(SpamFilterType::MessageLength { max_length: 500 }).await?;
     bot.add_spam_filter(SpamFilterType::RateLimit { max_messages: 5, window_seconds: 30 }).await?;
     bot.add_spam_filter(SpamFilterType::SymbolSpam { max_percentage: 50 }).await?;
+    bot.add_spam_filter(SpamFilterType::ExcessiveEmotes { max_count: 10 }).await?;
 
-    info!("Configured spam protection with {} filters", 6);
+    info!("Configured spam protection with {} filters", 7);
 
-    // Register periodic timers
-    bot.add_timer("social".to_string(), "Follow us on Twitter @YourHandle and join our Discord! 🐦".to_string(), 600).await?; // Every 10 minutes
-    bot.add_timer("subscribe".to_string(), "Don't forget to subscribe if you're enjoying the stream! 🔔".to_string(), 900).await?; // Every 15 minutes
-    bot.add_timer("uptime_reminder".to_string(), "Stream has been live for a while! Thanks for watching! ❤️".to_string(), 1800).await?; // Every 30 minutes
+    // Register periodic timers with different intervals
+    info!("Setting up periodic timers...");
+    
+    bot.add_timer("social".to_string(), 
+        "Follow us on Twitter @YourHandle and join our Discord!".to_string(), 
+        600 // Every 10 minutes
+    ).await?;
+    
+    bot.add_timer("subscribe".to_string(), 
+        "Don't forget to subscribe if you're enjoying the stream! 🔔".to_string(), 
+        900 // Every 15 minutes
+    ).await?;
+    
+    bot.add_timer("uptime_reminder".to_string(), 
+        "Thanks for watching! Bot uptime: $(count) posts 💖".to_string(), 
+        1800 // Every 30 minutes
+    ).await?;
 
-    // Start the bot
+    // Advanced timer with specific targeting
+    bot.add_timer_advanced(
+        "special_announcement".to_string(),
+        "Special stream event happening soon! Don't miss it! ⭐".to_string(),
+        3600, // Every hour
+        vec![], // All channels
+        vec!["twitch".to_string()] // Only on Twitch
+    ).await?;
+
+    info!("Configured {} timers", 4);
+
+    // Start the bot with full integration
+    info!("Starting bot with all systems...");
     if let Err(e) = bot.start().await {
         error!("Failed to start bot: {}", e);
         return Err(e);
     }
 
-    // Run health checks periodically
-    let health_check_interval = Duration::from_secs(60);
-    // let bot_health = bot.health_check();
-    tokio::spawn(async move {
-        loop {
-            sleep(health_check_interval).await;
-            let status = bot.health_check().await;
-            debug!("Health check: {:?}", status);
-        }
-    });
+    info!("Bot started successfully! All systems operational.");
+    info!("Analytics tracking enabled");
+    info!("Spam protection active");
+    info!("Timer system running");
+    info!("Command system ready");
 
-    // Keep the main thread alive
+    // Run periodic health checks and stats logging
+    let health_check_interval = Duration::from_secs(60);
+    let stats_log_interval = Duration::from_secs(300); // Log stats every 5 minutes
+    let mut stats_counter = 0;
+    
     loop {
-        sleep(Duration::from_secs(30)).await;
-        info!("Bot is running...");
+        sleep(health_check_interval).await;
+        
+        // Health check
+        let status = bot.health_check().await;
+        debug!("Health check: {:?}", status);
+        
+        // Check if any connections are unhealthy
+        let unhealthy_platforms: Vec<_> = status.iter()
+            .filter(|(_, &healthy)| !healthy)
+            .map(|(platform, _)| platform)
+            .collect();
+        
+        if !unhealthy_platforms.is_empty() {
+            error!("Unhealthy platforms detected: {:?}", unhealthy_platforms);
+        }
+        
+        // Log comprehensive stats every 5 minutes
+        stats_counter += 1;
+        if stats_counter >= 5 {
+            stats_counter = 0;
+            
+            match bot.get_bot_stats().await {
+                Ok(stats) => {
+                    info!("📊 Bot Statistics: {}", serde_json::to_string_pretty(&stats).unwrap_or_else(|_| "Failed to serialize".to_string()));
+                }
+                Err(e) => {
+                    error!("Failed to get bot stats: {}", e);
+                }
+            }
+            
+            // Log timer stats
+            let timer_stats = bot.get_timer_stats().await;
+            info!("⏰ Timer Status: {} active timers", timer_stats.len());
+            for (name, (enabled, count, last_triggered)) in timer_stats {
+                let status = if enabled { "✅" } else { "❌" };
+                let last = last_triggered
+                    .map(|t| format!("{} ago", chrono::Utc::now().signed_duration_since(t).num_minutes()))
+                    .unwrap_or_else(|| "never".to_string());
+                info!("  {} {} - {} executions, last: {}", status, name, count, last);
+            }
+        }
+        
+        // Simple keep-alive message
+        if stats_counter == 0 {
+            info!("Bot running smoothly...");
+        }
     }
+}
+
+// Graceful shutdown handler (for future use)
+async fn _setup_shutdown_handler(mut bot: ChatBot) {
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+        info!("Received shutdown signal, gracefully stopping bot...");
+        if let Err(e) = bot.shutdown().await {
+            error!("Error during shutdown: {}", e);
+        }
+        std::process::exit(0);
+    });
 }
 
 #[cfg(test)]
@@ -113,12 +187,63 @@ mod tests {
     #[tokio::test]
     async fn test_bot_creation() {
         let bot = ChatBot::new();
-        // Basic smoke test
-        assert!(true);
+        
+        // Test basic bot functionality
+        assert!(bot.command_exists("nonexistent").await == false);
+        
+        // Test command registration
+        bot.add_command("test".to_string(), "Test response".to_string(), false, 0).await;
+        assert!(bot.command_exists("test").await == true);
+    }
+
+    #[tokio::test]
+    async fn test_command_system() {
+        let bot = ChatBot::new();
+        
+        // Add test commands
+        bot.add_command("hello".to_string(), "Hello $(user)!".to_string(), false, 5).await;
+        bot.add_command("mod".to_string(), "Mod only".to_string(), true, 0).await;
+        
+        let commands = bot.command_system.get_all_commands().await;
+        assert!(commands.contains(&"hello".to_string()));
+        assert!(commands.contains(&"mod".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_timer_system() {
+        let bot = ChatBot::new();
+        
+        // Test timer creation
+        let result = bot.add_timer("test_timer".to_string(), "Test message".to_string(), 60).await;
+        assert!(result.is_ok());
+        
+        // Test invalid timer (too short interval)
+        let result = bot.add_timer("invalid".to_string(), "Test".to_string(), 10).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_spam_filters() {
+        let bot = ChatBot::new();
+        
+        // Test adding spam filters
+        let result = bot.add_spam_filter(SpamFilterType::ExcessiveCaps { max_percentage: 70 }).await;
+        assert!(result.is_ok());
+        
+        let result = bot.add_spam_filter(SpamFilterType::MessageLength { max_length: 500 }).await;
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_version_info() {
         assert!(!env!("CARGO_PKG_VERSION").is_empty());
+    }
+
+    #[test]
+    fn test_analytics_creation() {
+        use crate::bot::analytics::AnalyticsSystem;
+        let _analytics = AnalyticsSystem::new();
+        // Basic smoke test for analytics system
+        assert!(true);
     }
 }

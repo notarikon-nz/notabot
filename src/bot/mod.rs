@@ -3,7 +3,6 @@ use log::{error, info, warn};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
-// use tokio::time::{sleep, Duration};
 
 use crate::platforms::PlatformConnection;
 use crate::types::{ChatMessage, SpamFilterType};
@@ -11,32 +10,36 @@ use crate::types::{ChatMessage, SpamFilterType};
 pub mod commands;
 pub mod timers;
 pub mod moderation;
+pub mod analytics;
 
 use commands::CommandSystem;
 use timers::TimerSystem;
 use moderation::ModerationSystem;
+use analytics::{AnalyticsSystem, AnalyticsEvent};
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
     connections: Arc<RwLock<HashMap<String, Box<dyn PlatformConnection>>>>,
-    command_system: CommandSystem,
+    command_system: Arc<CommandSystem>,
     timer_system: TimerSystem,
-    moderation_system: ModerationSystem,
+    moderation_system: Arc<ModerationSystem>,
+    analytics_system: Arc<RwLock<AnalyticsSystem>>,
 }
 
 impl ChatBot {
     pub fn new() -> Self {
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
-            command_system: CommandSystem::new(),
+            command_system: Arc::new(CommandSystem::new()),
             timer_system: TimerSystem::new(),
-            moderation_system: ModerationSystem::new(),
+            moderation_system: Arc::new(ModerationSystem::new()),
+            analytics_system: Arc::new(RwLock::new(AnalyticsSystem::new())),
         }
     }
 
     /// Set the command prefix (default is "!")
-    pub fn set_command_prefix(&mut self, prefix: String) {
-        self.command_system.set_command_prefix(prefix);
+    pub async fn set_command_prefix(&self, prefix: String) {
+        self.command_system.set_command_prefix(prefix).await;
     }
 
     /// Add a platform connection to the bot
@@ -112,9 +115,20 @@ impl ChatBot {
         self.moderation_system.clear_message_history().await;
     }
 
+    /// Get analytics data
+    pub async fn get_analytics(&self) -> HashMap<String, serde_json::Value> {
+        self.analytics_system.read().await.get_analytics().await
+    }
+
     /// Start the bot and all connections
     pub async fn start(&mut self) -> Result<()> {
         info!("Starting chat bot...");
+
+        // Start analytics processor first
+        {
+            let mut analytics_guard = self.analytics_system.write().await;
+            analytics_guard.start_analytics_processor().await;
+        }
 
         // Collect message receivers
         let mut receivers = Vec::new();
@@ -147,48 +161,107 @@ impl ChatBot {
     }
 
     /// Process incoming messages and handle commands/moderation
-    async fn start_message_processor(&mut self, receivers: Vec<broadcast::Receiver<ChatMessage>>) -> Result<()> {
-        let command_system = &self.command_system;
-        let moderation_system = &self.moderation_system;
+    async fn start_message_processor(&self, receivers: Vec<broadcast::Receiver<ChatMessage>>) -> Result<()> {
+        let command_system = Arc::clone(&self.command_system);
+        let moderation_system = Arc::clone(&self.moderation_system);
+        let analytics_system = Arc::clone(&self.analytics_system);
         let connections = Arc::clone(&self.connections);
         
-        // Create a response channel
+        // Create response channel for sending bot responses
         let (response_tx, mut response_rx) = tokio::sync::mpsc::channel::<(String, String, String)>(100);
         
-        // Response handler that can access connections through Arc
-        tokio::spawn(async move {
-            while let Some((platform, channel, message)) = response_rx.recv().await {
-                let connections_guard = connections.read().await;
-                if let Some(connection) = connections_guard.get(&platform) {
-                    if let Err(e) = connection.send_message(&channel, &message).await {
-                        error!("Failed to send response to {}#{}: {}", platform, channel, e);
-                    } else {
-                        info!("Sent response to {}#{}: {}", platform, channel, message);
-                    }
-                } else {
-                    warn!("No connection found for platform: {}", platform);
-                }
-            }
-        });
+        // Get analytics sender
+        let analytics_sender = {
+            let analytics_guard = analytics_system.read().await;
+            analytics_guard.get_sender()
+        };
 
-        // Process messages from all receivers
+        // Response handler that sends messages back to platforms
+        {
+            let connections = Arc::clone(&connections);
+            tokio::spawn(async move {
+                while let Some((platform, channel, message)) = response_rx.recv().await {
+                    let connections_guard = connections.read().await;
+                    if let Some(connection) = connections_guard.get(&platform) {
+                        if let Err(e) = connection.send_message(&channel, &message).await {
+                            error!("Failed to send response to {}#{}: {}", platform, channel, e);
+                        } else {
+                            info!("Sent response to {}#{}: {}", platform, channel, message);
+                        }
+                    } else {
+                        warn!("No connection found for platform: {}", platform);
+                    }
+                }
+            });
+        }
+
+        // Create analytics command channel
+        let (analytics_command_tx, mut analytics_command_rx) = tokio::sync::mpsc::channel::<(String, String, String)>(100);
+        
+        // Analytics command processor
+        {
+            let analytics_sender = Arc::clone(&analytics_sender);
+            tokio::spawn(async move {
+                while let Some((command, user, channel)) = analytics_command_rx.recv().await {
+                    if let Err(e) = analytics_sender.send(AnalyticsEvent::CommandExecuted {
+                        command,
+                        user,
+                        channel,
+                    }).await {
+                        error!("Failed to send analytics command event: {}", e);
+                    }
+                }
+            });
+        }
+
+        // Process messages from all platform receivers
         for mut receiver in receivers {
             let response_tx = response_tx.clone();
-            
-            // We need to share the systems across async tasks
-            // This requires some careful handling due to Rust's ownership rules
-            // For now, we'll use a simpler approach and refactor later if needed
+            let analytics_command_tx = analytics_command_tx.clone();
+            let command_system = Arc::clone(&command_system);
+            let moderation_system = Arc::clone(&moderation_system);
+            let analytics_sender = Arc::clone(&analytics_sender);
             
             tokio::spawn(async move {
                 loop {
                     match receiver.recv().await {
                         Ok(message) => {
-                            // For now, we'll handle this in a simplified way
-                            // In the next iteration, we'll improve the architecture
-                            info!("Received message from {}: {}", message.username, message.content);
+                            info!("Processing message from {}: {}", message.username, message.content);
                             
-                            // TODO: Integrate with command and moderation systems
-                            // This will require some architectural changes to share systems safely
+                            // Record message in analytics
+                            if let Err(e) = analytics_sender.send(AnalyticsEvent::MessageReceived(message.clone())).await {
+                                error!("Failed to send analytics message event: {}", e);
+                            }
+                            
+                            // Update user message history for moderation
+                            moderation_system.update_user_history(&message).await;
+                            
+                            // Check spam filters first
+                            if let Some(action) = moderation_system.check_spam_filters(&message).await {
+                                warn!("Message flagged by spam filter: {} from {}", message.content, message.username);
+                                
+                                // Record spam in analytics
+                                if let Err(e) = analytics_sender.send(AnalyticsEvent::SpamBlocked(message.clone())).await {
+                                    error!("Failed to send analytics spam event: {}", e);
+                                }
+                                
+                                // Handle moderation action
+                                if let Err(e) = moderation::ModerationSystem::handle_moderation_action(
+                                    action, &message, &response_tx
+                                ).await {
+                                    error!("Failed to handle moderation action: {}", e);
+                                }
+                                continue; // Don't process commands for flagged messages
+                            }
+                            
+                            // Process commands
+                            if let Err(e) = command_system.process_message(
+                                message.clone(), 
+                                &response_tx,
+                                Some(&analytics_command_tx)
+                            ).await {
+                                error!("Failed to process command: {}", e);
+                            }
                         }
                         Err(broadcast::error::RecvError::Lagged(n)) => {
                             warn!("Message receiver lagged by {} messages", n);
@@ -220,6 +293,65 @@ impl ChatBot {
         }
         
         status
+    }
+
+    /// Get detailed bot statistics
+    pub async fn get_bot_stats(&self) -> Result<serde_json::Value> {
+        let mut stats = serde_json::Map::new();
+        
+        // Get analytics
+        let analytics = self.get_analytics().await;
+        stats.insert("analytics".to_string(), serde_json::Value::Object(
+            analytics.into_iter().collect()
+        ));
+        
+        // Get timer stats
+        let timer_stats = self.get_timer_stats().await;
+        let timer_json: serde_json::Value = serde_json::to_value(timer_stats)
+            .unwrap_or_else(|_| serde_json::Value::Null);
+        stats.insert("timers".to_string(), timer_json);
+        
+        // Get connection health
+        let health = self.health_check().await;
+        stats.insert("connections".to_string(), serde_json::to_value(health)?);
+        
+        // Get command count
+        let commands = self.command_system.get_all_commands().await;
+        stats.insert("total_commands".to_string(), serde_json::Value::Number(commands.len().into()));
+        
+        Ok(serde_json::Value::Object(stats))
+    }
+
+    /// Get user information
+    pub async fn get_user_info(&self, platform: &str, username: &str) -> Option<serde_json::Value> {
+        let analytics_guard = self.analytics_system.read().await;
+        if let Some(user_stats) = analytics_guard.get_user_stats(platform, username).await {
+            serde_json::to_value(user_stats).ok()
+        } else {
+            None
+        }
+    }
+
+    /// Add a command with argument support
+    pub async fn add_command_with_args(&self, trigger: String, response: String, mod_only: bool, cooldown_seconds: u64, help_text: Option<String>) {
+        // For now, we'll store help text in the response with a special marker
+        let enhanced_response = if let Some(help) = help_text {
+            format!("{}|HELP:{}", response, help)
+        } else {
+            response
+        };
+        
+        self.add_command(trigger, enhanced_response, mod_only, cooldown_seconds).await;
+    }
+
+    /// Remove a command
+    pub async fn remove_command(&self, command_name: &str) -> bool {
+        self.command_system.remove_command(command_name).await
+    }
+
+    /// Check if a command exists
+    pub async fn command_exists(&self, command_name: &str) -> bool {
+        self.command_system.command_exists(command_name).await
     }
 
     /// Gracefully shutdown all connections

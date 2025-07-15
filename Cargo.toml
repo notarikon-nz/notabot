@@ -18,3 +18,9 @@ futures-util = "0.3"
 dotenv = "0.15"
 
 [lib]
+name = "notabot"
+path = "src/lib.rs"
+
+[[bin]]
+name = "notabot"
+path = "src/main.rs"
