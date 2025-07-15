@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};

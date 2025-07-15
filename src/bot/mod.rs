@@ -142,7 +142,7 @@ impl ChatBot {
         info!("🌐 Starting web dashboard on port {}...", port);
         
         // Import web modules locally to avoid module resolution issues
-        use crate::web::{WebDashboard, DashboardState};
+        use crate::web::{WebDashboard};
         
         // Create dashboard
         let dashboard = WebDashboard::new();

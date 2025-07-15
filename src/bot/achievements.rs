@@ -1,11 +1,9 @@
-use anyhow::Result;
-use log::{debug, info};
+use log::{info};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::types::ChatMessage;
 use crate::bot::points::UserPoints;
 
 /// Achievement definition
@@ -117,7 +115,7 @@ pub struct AchievementSystem {
 
 impl AchievementSystem {
     pub fn new() -> Self {
-        let mut system = Self {
+        let system = Self {
             achievements: Arc::new(RwLock::new(HashMap::new())),
             user_achievements: Arc::new(RwLock::new(HashMap::new())),
         };

@@ -1,8 +1,8 @@
 use anyhow::Result;
-use log::{info, warn};
+use log::{warn};
 use std::sync::Arc;
 
-use crate::bot::achievements::{AchievementSystem, AchievementRarity, AchievementCategory};
+use crate::bot::achievements::{AchievementSystem, AchievementRarity};
 use crate::types::ChatMessage;
 
 pub struct AchievementCommands {

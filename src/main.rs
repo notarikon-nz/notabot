@@ -25,18 +25,18 @@ async fn main() -> Result<()> {
     if let Ok(twitch_config) = TwitchConfig::from_env() {
         let twitch_connection = TwitchConnection::new(twitch_config);
         bot.add_connection(Box::new(twitch_connection)).await;
-        info!("✅ Twitch connection configured");
+        info!("Twitch connection configured");
     } else {
-        warn!("⚠️ Twitch configuration not found, skipping Twitch integration");
+        warn!("Twitch configuration not found, skipping Twitch integration");
     }
 
     // Add YouTube connection (optional)
     if let Ok(youtube_config) = YouTubeConfig::from_env() {
         let youtube_connection = YouTubeConnection::new(youtube_config);
         bot.add_connection(Box::new(youtube_connection)).await;
-        info!("✅ YouTube Live Chat connection configured");
+        info!("YouTube Live Chat connection configured");
     } else {
-        info!("ℹ️ YouTube configuration not found, skipping YouTube integration");
+        info!("YouTube configuration not found, skipping YouTube integration");
         info!("   To enable YouTube: Set YOUTUBE_API_KEY and YOUTUBE_LIVE_CHAT_ID");
     }
 
