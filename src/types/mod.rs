@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use anyhow::Result;
 use tokio::fs;
@@ -682,3 +683,154 @@ impl FilterConfigManager {
         }
     }
 }
+
+/// Main timer configuration structure loaded from YAML
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerConfig {
+    pub version: String,
+    pub description: String,
+    pub global_settings: GlobalTimerSettings,
+    pub timers: Vec<TimerDefinition>,
+    pub categories: HashMap<String, Vec<String>>,
+    pub variables: TimerVariables,
+    pub analytics: TimerAnalytics,
+    pub rules: TimerRules,
+}
+
+impl Default for TimerConfig {
+    fn default() -> Self {
+        Self {
+            version: "1.0".to_string(),
+            description: "NotaBot Timer Configuration".to_string(),
+            global_settings: GlobalTimerSettings::default(),
+            timers: Vec::new(),
+            categories: HashMap::new(),
+            variables: TimerVariables::default(),
+            analytics: TimerAnalytics::default(),
+            rules: TimerRules::default(),
+        }
+    }
+}
+
+/// Global settings that apply to all timers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlobalTimerSettings {
+    pub minimum_interval_seconds: u64,
+    pub auto_reload: bool,
+    pub variable_substitution: bool,
+    pub platform_targeting: bool,
+}
+
+impl Default for GlobalTimerSettings {
+    fn default() -> Self {
+        Self {
+            minimum_interval_seconds: 30,
+            auto_reload: true,
+            variable_substitution: true,
+            platform_targeting: true,
+        }
+    }
+}
+
+/// Individual timer definition from configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerDefinition {
+    pub name: String,
+    pub enabled: bool,
+    pub message: String,
+    pub interval_seconds: u64,
+    pub channels: Vec<String>,
+    pub platforms: Vec<String>,
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub variables: Option<Vec<String>>,
+}
+
+/// Variable definitions for timer messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerVariables {
+    pub builtin: Vec<VariableDefinition>,
+    pub custom: Vec<VariableDefinition>,
+}
+
+impl Default for TimerVariables {
+    fn default() -> Self {
+        Self {
+            builtin: vec![
+                VariableDefinition {
+                    name: "$(timer)".to_string(),
+                    description: "Name of the current timer".to_string(),
+                    example: Some("ai_features".to_string()),
+                    default: None,
+                },
+                VariableDefinition {
+                    name: "$(count)".to_string(),
+                    description: "Number of times this timer has triggered".to_string(),
+                    example: Some("42".to_string()),
+                    default: None,
+                },
+                VariableDefinition {
+                    name: "$(platform)".to_string(),
+                    description: "Current platform name".to_string(),
+                    example: Some("twitch".to_string()),
+                    default: None,
+                },
+                VariableDefinition {
+                    name: "$(channel)".to_string(),
+                    description: "Current channel name".to_string(),
+                    example: Some("awesome_streamer".to_string()),
+                    default: None,
+                },
+            ],
+            custom: Vec::new(),
+        }
+    }
+}
+
+/// Definition of a variable that can be used in timer messages
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VariableDefinition {
+    pub name: String,
+    pub description: String,
+    pub example: Option<String>,
+    pub default: Option<String>,
+}
+
+/// Analytics configuration for timers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerAnalytics {
+    pub track_effectiveness: bool,
+    pub track_engagement: bool,
+    pub track_click_through: bool,
+}
+
+impl Default for TimerAnalytics {
+    fn default() -> Self {
+        Self {
+            track_effectiveness: true,
+            track_engagement: true,
+            track_click_through: false,
+        }
+    }
+}
+
+/// Rules and validation for timers
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimerRules {
+    pub max_timers_per_channel: usize,
+    pub max_message_length: usize,
+    pub min_interval_seconds: u64,
+    pub max_interval_seconds: u64,
+}
+
+impl Default for TimerRules {
+    fn default() -> Self {
+        Self {
+            max_timers_per_channel: 20,
+            max_message_length: 500,
+            min_interval_seconds: 30,
+            max_interval_seconds: 86400, // 24 hours
+        }
+    }
+}
+

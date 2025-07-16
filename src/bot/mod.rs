@@ -12,7 +12,7 @@ pub mod achievement_commands;
 pub mod analytics;
 pub mod commands;
 pub mod enhanced_moderation;
-pub mod filter_commands; // NEW
+pub mod filter_commands;
 pub mod filter_import_export;
 pub mod moderation;
 pub mod pattern_matching;
@@ -21,30 +21,33 @@ pub mod points_commands;
 pub mod realtime_analytics;
 pub mod smart_escalation;
 pub mod timers;
+pub mod timer_commands;
 
 use commands::CommandSystem;
 use timers::TimerSystem;
+use timer_commands::TimerCommands;
 use moderation::ModerationSystem;
 use analytics::{AnalyticsSystem, AnalyticsEvent};
 use points::PointsSystem;
 use points_commands::PointsCommands;
 use achievements::AchievementSystem;
 use achievement_commands::AchievementCommands;
-use filter_commands::FilterCommands; // NEW
+use filter_commands::FilterCommands;
 use enhanced_moderation::EnhancedModerationSystem;
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
     connections: Arc<RwLock<HashMap<String, Box<dyn PlatformConnection>>>>,
     command_system: Arc<CommandSystem>,
-    timer_system: TimerSystem,
+    timer_system: Arc<TimerSystem>,
+    timer_commands: Arc<TimerCommands>,
     moderation_system: Arc<ModerationSystem>,
     analytics_system: Arc<RwLock<AnalyticsSystem>>,
     points_system: Arc<PointsSystem>,
     points_commands: Arc<PointsCommands>,
     achievement_system: Arc<AchievementSystem>,
     achievement_commands: Arc<AchievementCommands>,
-    filter_commands: Arc<FilterCommands>, // NEW
+    filter_commands: Arc<FilterCommands>,
 }
 
 impl ChatBot {
@@ -54,27 +57,28 @@ impl ChatBot {
         let achievement_system = Arc::new(AchievementSystem::new());
         let achievement_commands = Arc::new(AchievementCommands::new(Arc::clone(&achievement_system)));
         let moderation_system = Arc::new(ModerationSystem::new());
-        let filter_commands = Arc::new(FilterCommands::new(Arc::clone(&moderation_system))); // NEW
+        let filter_commands = Arc::new(FilterCommands::new(Arc::clone(&moderation_system)));
+        let timer_system = Arc::new(TimerSystem::new());
+        let timer_commands = Arc::new(TimerCommands::new(Arc::clone(&timer_system)));
         
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
             command_system: Arc::new(CommandSystem::new()),
-            timer_system: TimerSystem::new(),
+            timer_system,
+            timer_commands,
             moderation_system,
             analytics_system: Arc::new(RwLock::new(AnalyticsSystem::new())),
             points_system,
             points_commands,
             achievement_system,
             achievement_commands,
-            filter_commands, // NEW
+            filter_commands,
         }
-
     }
 
     pub fn create_enhanced_moderation(&self) -> EnhancedModerationSystem {
         EnhancedModerationSystem::new(self.moderation_system.clone())
-    }        
-
+    }
 
     /// Set the command prefix (default is "!")
     pub async fn set_command_prefix(&self, prefix: String) {
@@ -92,6 +96,10 @@ impl ChatBot {
     pub async fn add_command(&self, trigger: String, response: String, mod_only: bool, cooldown_seconds: u64) {
         self.command_system.add_command(trigger, response, mod_only, cooldown_seconds).await;
     }
+
+    // =================================================================
+    // TIMER SYSTEM API - Updated to work with external YAML config
+    // =================================================================
 
     /// Add a new timer that posts messages at regular intervals
     pub async fn add_timer(&self, name: String, message: String, interval_seconds: u64) -> Result<()> {
@@ -115,15 +123,60 @@ impl ChatBot {
         self.timer_system.set_timer_enabled(name, enabled).await
     }
 
+    /// Get statistics for all timers
+    pub async fn get_timer_stats(&self) -> HashMap<String, (bool, u64, Option<chrono::DateTime<chrono::Utc>>)> {
+        self.timer_system.get_timer_stats().await
+    }
+
     /// Remove a timer
     pub async fn remove_timer(&self, name: &str) -> Result<()> {
         self.timer_system.remove_timer(name).await
     }
 
-    /// Get statistics for all timers
-    pub async fn get_timer_stats(&self) -> HashMap<String, (bool, u64, Option<chrono::DateTime<chrono::Utc>>)> {
-        self.timer_system.get_timer_stats().await
+    /// Set a custom variable for timer message substitution
+    pub async fn set_timer_variable(&self, name: String, value: String) -> Result<()> {
+        self.timer_system.set_custom_variable(name, value).await;
+        Ok(())
     }
+
+    /// Get a custom timer variable value
+    pub async fn get_timer_variable(&self, name: &str) -> Option<String> {
+        self.timer_system.get_custom_variable(name).await
+    }
+
+    /// Remove a custom timer variable
+    pub async fn remove_timer_variable(&self, name: &str) -> Result<bool> {
+        Ok(self.timer_system.remove_custom_variable(name).await)
+    }
+
+    /// List all custom timer variables
+    pub async fn list_timer_variables(&self) -> Result<Vec<(String, String)>> {
+        Ok(self.timer_system.list_custom_variables().await)
+    }
+
+    /// Reload timer configuration from file
+    pub async fn reload_timer_config(&self) -> Result<()> {
+        self.timer_system.reload_config().await
+    }
+
+    /// Get timer configuration categories
+    pub async fn get_timer_categories(&self) -> HashMap<String, Vec<String>> {
+        self.timer_system.get_timer_categories().await
+    }
+
+    /// Enable/disable timers by category
+    pub async fn set_timer_category_enabled(&self, category: &str, enabled: bool) -> Result<usize> {
+        self.timer_system.set_category_enabled(category, enabled).await
+    }
+
+    /// Get timer analytics (if enabled)
+    pub async fn get_timer_analytics(&self) -> HashMap<String, serde_json::Value> {
+        self.timer_system.get_timer_analytics().await
+    }
+
+    // =================================================================
+    // SPAM FILTERING AND MODERATION SYSTEM
+    // =================================================================
 
     /// Add a spam filter to the bot (legacy method for backward compatibility)
     pub async fn add_spam_filter(&self, filter_type: SpamFilterType) -> Result<()> {
@@ -252,10 +305,14 @@ impl ChatBot {
         self.moderation_system.clear_message_history().await;
     }
 
+    // =================================================================
+    // WEB DASHBOARD
+    // =================================================================
+
     /// Start the web dashboard on the specified port
     #[cfg(feature = "web")]
     pub async fn start_web_dashboard(&self, port: u16) -> Result<()> {
-        info!("🌐 Starting web dashboard on port {}...", port);
+        info!("Starting web dashboard on port {}...", port);
         
         // Import web modules locally to avoid module resolution issues
         use crate::web::{WebDashboard};
@@ -264,7 +321,7 @@ impl ChatBot {
         let dashboard = WebDashboard::new();
         let dashboard_state = dashboard.get_state();
         
-        info!("📊 Setting up dashboard data updates...");
+        info!("Setting up dashboard data updates...");
         
         // Start periodic data updates for the dashboard
         let analytics_system = Arc::clone(&self.analytics_system);
@@ -272,7 +329,7 @@ impl ChatBot {
         let state_for_updates = dashboard_state.clone();
         
         tokio::spawn(async move {
-            info!("📈 Dashboard data updater started");
+            info!("Dashboard data updater started");
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
             loop {
                 interval.tick().await;
@@ -294,7 +351,7 @@ impl ChatBot {
             }
         });
         
-        info!("🚀 Starting web server...");
+        info!("Starting web server...");
         
         // Start the web server in a separate task
         tokio::spawn(async move {
@@ -303,7 +360,7 @@ impl ChatBot {
             }
         });
         
-        info!("🌐 Web dashboard started on port {}", port);
+        info!("Web dashboard started on port {}", port);
         Ok(())
     }
 
@@ -313,6 +370,10 @@ impl ChatBot {
         warn!("Web dashboard is disabled. Enable with --features web");
         Ok(())
     }
+
+    // =================================================================
+    // ACHIEVEMENTS AND POINTS SYSTEM
+    // =================================================================
 
     /// Get achievement statistics
     pub async fn get_achievement_stats(&self) -> HashMap<String, serde_json::Value> {
@@ -354,6 +415,10 @@ impl ChatBot {
         self.analytics_system.read().await.get_analytics().await
     }
 
+    // =================================================================
+    // BOT LIFECYCLE
+    // =================================================================
+
     /// Start the bot and all connections
     pub async fn start(&mut self) -> Result<()> {
         info!("Starting chat bot...");
@@ -393,8 +458,22 @@ impl ChatBot {
         // Start message processing with the collected receivers
         self.start_message_processor(receivers).await?;
 
-        // Start the timer system
-        self.timer_system.start_timer_system(Arc::clone(&self.connections)).await?;
+        // Start the timer system with external YAML configuration
+        let timer_system_clone = Arc::clone(&self.timer_system);
+        let connections_clone = Arc::clone(&self.connections);
+        
+        tokio::spawn(async move {
+            // We need to get a mutable reference to start the timer system
+            // Since we're using Arc, we need to handle this carefully
+            match timer_system_clone.start_timer_system(connections_clone).await {
+                Ok(_) => {
+                    info!("Timer system started successfully");
+                }
+                Err(e) => {
+                    error!("Failed to start timer system: {}", e);
+                }
+            }
+        });
 
         info!("Chat bot started successfully");
         
@@ -467,7 +546,8 @@ impl ChatBot {
             let points_commands = Arc::clone(&self.points_commands);
             let achievement_system = Arc::clone(&self.achievement_system);
             let achievement_commands = Arc::clone(&self.achievement_commands);
-            let filter_commands = Arc::clone(&self.filter_commands); // NEW
+            let filter_commands = Arc::clone(&self.filter_commands);
+            let timer_commands = Arc::clone(&self.timer_commands); // Add timer commands
             
             tokio::spawn(async move {
                 loop {
@@ -535,7 +615,21 @@ impl ChatBot {
                                     let command_name = parts[0].to_lowercase();
                                     let args: Vec<&str> = parts[1..].to_vec();
                                     
-                                    // Try filter commands first (NEW)
+                                    // Try timer commands first (NEW)
+                                    match timer_commands.process_command(&command_name, &args, &message, &response_tx).await {
+                                        Ok(true) => {
+                                            // Timer command was handled
+                                            continue;
+                                        }
+                                        Ok(false) => {
+                                            // Not a timer command, try filter commands
+                                        }
+                                        Err(e) => {
+                                            error!("Error processing timer command: {}", e);
+                                        }
+                                    }
+                                    
+                                    // Try filter commands
                                     match filter_commands.process_command(&command_name, &args, &message, &response_tx).await {
                                         Ok(true) => {
                                             // Filter command was handled
@@ -619,6 +713,10 @@ impl ChatBot {
         Ok(())
     }
 
+    // =================================================================
+    // UTILITY METHODS
+    // =================================================================
+
     /// Health check for all connections
     pub async fn health_check(&self) -> HashMap<String, bool> {
         let mut status = HashMap::new();
@@ -651,6 +749,12 @@ impl ChatBot {
         let timer_json: serde_json::Value = serde_json::to_value(timer_stats)
             .unwrap_or_else(|_| serde_json::Value::Null);
         stats.insert("timers".to_string(), timer_json);
+        
+        // Get timer analytics
+        let timer_analytics = self.get_timer_analytics().await;
+        stats.insert("timer_analytics".to_string(), serde_json::Value::Object(
+            timer_analytics.into_iter().collect()
+        ));
         
         // Get connection health
         let health = self.health_check().await;
@@ -719,7 +823,7 @@ impl ChatBot {
     pub async fn shutdown(&mut self) -> Result<()> {
         info!("Shutting down chat bot...");
         
-        // Stop timer system
+        // Stop timer system gracefully
         self.timer_system.shutdown().await;
         
         // Disconnect all platforms

@@ -94,12 +94,12 @@ AUDIT_LOGGING=true
 EOF
 
 # Create data directories
-echo "📁 Creating data directories..."
-mkdir -p data/{filters,exports,logs,analytics,community}
-mkdir -p config/{filters,patterns,escalation}
+echo "Creating data directories..."
+mkdir -p data/{filters,exports,logs,analytics,community,timers}
+mkdir -p config/{filters,patterns,escalation,timers}
 
 # Create default configuration files
-echo "⚙️ Creating configuration files..."
+echo "Creating configuration files..."
 
 # Copy the community filter pack (this would be the JSON content from above)
 cat > data/community/community_filters.json << 'EOF'
@@ -232,7 +232,7 @@ echo "• Commands: !ai, !filters, !patterns, !appeal, !optimize"
 echo "• Import NightBot: Place export in nightbot_import.json"
 echo "• Community filters: Auto-loaded from data/community/"
 echo ""
-echo -e "${GREEN}🚀 Ready to revolutionize your stream moderation!${NC}"
+echo -e "${GREEN}Ready to revolutionize your stream moderation!${NC}"
 
 # Check if .env exists
 if [ ! -f ".env" ]; then
@@ -245,7 +245,7 @@ fi
 # Offer to create .env file interactively
 if [ ! -f ".env" ]; then
     echo ""
-    read -p "🤖 Would you like to create your .env file now? (y/N): " -n 1 -r
+    read -p "Would you like to create your .env file now? (y/N): " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         cp .env.example .env

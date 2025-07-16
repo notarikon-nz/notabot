@@ -5,11 +5,10 @@ use std::env;
 use std::path::Path;
 
 use notabot::prelude::*;
-use notabot::types::{ExemptionLevel, ModerationAction, ModerationEscalation, FilterConfigManager};
-use notabot::bot::enhanced_moderation::EnhancedModerationSystem;
+use notabot::types::{ExemptionLevel, FilterConfigManager};
 use notabot::bot::pattern_matching::AdvancedPattern;
 use notabot::bot::filter_import_export::{ExportFormat, ExportOptions, ImportOptions};
-use notabot::bot::smart_escalation::{SmartEscalation, PositiveActionType, ViolationSeverity};
+use notabot::bot::smart_escalation::SmartEscalation;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -285,7 +284,7 @@ async fn main() -> Result<()> {
     info!("Registering AI-enhanced commands...");
 
     // Basic commands
-    bot.add_command("hello".to_string(), "Hello $(user)! 👋 Welcome to our AI-moderated stream on $(platform)!".to_string(), false, 5).await;
+    bot.add_command("hello".to_string(), "Hello $(user)! Welcome to our AI-moderated stream on $(platform)!".to_string(), false, 5).await;
     bot.add_command("uptime".to_string(), "AI moderation system running smoothly on $(platform)! ".to_string(), false, 30).await;
     
     // AI and moderation commands
@@ -344,43 +343,30 @@ async fn main() -> Result<()> {
 
     info!("AI-enhanced commands registered");
 
-
     // =================================================================
     // AI-THEMED TIMERS
     // =================================================================
-    
-    bot.add_timer("ai_features".to_string(), 
-        "This stream is protected by NotaBot's AI moderation! Features: Smart pattern detection, learning algorithms, real-time optimization".to_string(), 
-        900).await?; // 15 minutes
-    
-    bot.add_timer("community_ai".to_string(),
-        "Our AI learns from community feedback! Use !appeal if you think moderation made a mistake - it helps the AI improve! ".to_string(),
-        1200).await?; // 20 minutes
-    
-    bot.add_timer("ai_vs_nightbot".to_string(),
-        "Why NotaBot > NightBot: 10x faster response, AI pattern detection, automatic optimization, community filter sharing, 99.9% uptime!".to_string(),
-        1800).await?; // 30 minutes
-        
-    bot.add_timer("filter_sharing".to_string(),
-        "Our filters auto-improve and can be shared with other streamers! Part of the NotaBot community intelligence network".to_string(),
-        2400).await?; // 40 minutes
 
-    // Platform-specific AI announcements
-    bot.add_timer_advanced(
-        "twitch_ai_exclusive".to_string(),
-        "Twitch Exclusive: Our AI detects even advanced evasion techniques! Leetspeak, Unicode tricks, homoglyphs - nothing gets past!".to_string(),
-        1500, // 25 minutes
-        vec![], // All channels
-        vec!["twitch".to_string()] // Twitch only
-    ).await?;
+    info!("Loading AI-themed timers from configuration...");
+    
+    // Set custom variables for timer substitution through the bot's public API
+    if let Ok(discord_url) = env::var("DISCORD_URL") {
+        bot.set_timer_variable("$(discord)".to_string(), discord_url).await?;
+    }
+    if let Ok(twitter_handle) = env::var("TWITTER_HANDLE") {
+        bot.set_timer_variable("$(twitter)".to_string(), twitter_handle).await?;
+    }
+    if let Ok(youtube_channel) = env::var("YOUTUBE_CHANNEL") {
+        bot.set_timer_variable("$(youtube_channel)".to_string(), youtube_channel).await?;
+    }
 
-    bot.add_timer_advanced(
-        "youtube_ai_exclusive".to_string(),
-        "YouTube Exclusive: Cross-platform AI intelligence! Patterns learned on Twitch protect YouTube chat too!".to_string(),
-        1500, // 25 minutes
-        vec![], // All channels
-        vec!["youtube".to_string()] // YouTube only
-    ).await?;
+    info!("Timer system will load configuration from timers.yaml automatically");
+
+    // You can still add additional timers programmatically if needed
+    // These will supplement the ones loaded from the configuration file
+    bot.add_timer("runtime_status".to_string(), 
+        "NotaBot runtime status: $(count) announcements sent, protecting your chat 24/7!".to_string(), 
+        3600).await?; // 60 minutes - runtime status    
 
     info!("AI-themed timers configured");
 
@@ -415,7 +401,7 @@ async fn main() -> Result<()> {
             ).await {
                 debug!("Auto-export failed: {}", e);
             } else {
-                debug!("🤖 Auto-exported AI-optimized filters for community sharing");
+                debug!("Auto-exported AI-optimized filters for community sharing");
             }
         }
     });
@@ -535,6 +521,7 @@ async fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use notabot::bot::enhanced_moderation::EnhancedModerationSystem;
 
     #[tokio::test]
     async fn test_ai_enhanced_bot_creation() {
