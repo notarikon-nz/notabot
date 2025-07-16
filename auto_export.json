@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exported_at": "2025-07-16T05:48:09.159920962Z",
+  "exported_at": "2025-07-16T05:53:25.674608420Z",
   "exported_by": "NotaBot AI System",
   "bot_version": "2.0.0",
   "description": "AI-optimized filter pack with real-time effectiveness metrics",
@@ -11,7 +11,38 @@
   ],
   "filters": [
     {
-      "name": "blacklist_1752644889",
+      "name": "ai_rate_limiting",
+      "filter_type": {
+        "RateLimit": {
+          "max_messages": 4,
+          "window_seconds": 15
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "Please slow down your messages to maintain chat quality."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "Please slow down your messages to maintain chat quality.",
+      "created_at": "2025-07-16T05:53:25.674560379Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
+    {
+      "name": "blacklist_1752645205",
       "filter_type": {
         "Blacklist": {
           "patterns": [
@@ -100,7 +131,7 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "🤖 Excessive repetition detected. Please use normal text.",
-      "created_at": "2025-07-16T05:48:09.159911374Z",
+      "created_at": "2025-07-16T05:53:25.674603220Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -130,7 +161,7 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "AI detected excessive caps. Please use normal text formatting.",
-      "created_at": "2025-07-16T05:48:09.159914770Z",
+      "created_at": "2025-07-16T05:53:25.674605184Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -160,38 +191,7 @@
       "exemption_level": "Regular",
       "silent_mode": true,
       "custom_message": "Please reduce symbol usage for better readability.",
-      "created_at": "2025-07-16T05:48:09.159916343Z",
-      "effectiveness_stats": null,
-      "usage_context": [
-        "general"
-      ]
-    },
-    {
-      "name": "ai_rate_limiting",
-      "filter_type": {
-        "RateLimit": {
-          "max_messages": 4,
-          "window_seconds": 15
-        }
-      },
-      "enabled": true,
-      "escalation": {
-        "first_offense": {
-          "WarnUser": {
-            "message": "Please slow down your messages to maintain chat quality."
-          }
-        },
-        "repeat_offense": {
-          "TimeoutUser": {
-            "duration_seconds": 0
-          }
-        },
-        "offense_window_seconds": 3600
-      },
-      "exemption_level": "Subscriber",
-      "silent_mode": false,
-      "custom_message": "Please slow down your messages to maintain chat quality.",
-      "created_at": "2025-07-16T05:48:09.159920521Z",
+      "created_at": "2025-07-16T05:53:25.674607979Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -201,10 +201,10 @@
   "metadata": {
     "total_filters": 4,
     "filter_types": {
-      "SymbolSpam ": 1,
-      "Blacklist ": 1,
+      "RateLimit ": 1,
       "ExcessiveCaps ": 1,
-      "RateLimit ": 1
+      "Blacklist ": 1,
+      "SymbolSpam ": 1
     },
     "estimated_accuracy": 0.9,
     "recommended_for": [

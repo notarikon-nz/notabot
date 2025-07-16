@@ -280,7 +280,7 @@ rules:
   max_timers_per_channel: 20
   max_message_length: 500
   min_interval_seconds: 30
-  max_interval_seconds: 86400  # 24 hours
+  max_interval_seconds: 604800  # Weekly
   
   # Platform-specific rules
   twitch:
