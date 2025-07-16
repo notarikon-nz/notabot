@@ -1,5 +1,3 @@
-// src/bot/mod.rs - Complete enhanced bot integration with filter commands
-
 use anyhow::Result;
 use log::{error, info, warn};
 use std::collections::HashMap;
@@ -9,15 +7,20 @@ use tokio::sync::{broadcast, RwLock};
 use crate::platforms::PlatformConnection;
 use crate::types::{ChatMessage, SpamFilterType, ExemptionLevel, ModerationEscalation, ModerationAction};
 
-pub mod commands;
-pub mod timers;
-pub mod moderation;
-pub mod analytics;
-pub mod points;
-pub mod points_commands;
 pub mod achievements;
 pub mod achievement_commands;
+pub mod analytics;
+pub mod commands;
+pub mod enhanced_moderation;
 pub mod filter_commands; // NEW
+pub mod filter_import_export;
+pub mod moderation;
+pub mod pattern_matching;
+pub mod points;
+pub mod points_commands;
+pub mod realtime_analytics;
+pub mod smart_escalation;
+pub mod timers;
 
 use commands::CommandSystem;
 use timers::TimerSystem;
@@ -28,6 +31,7 @@ use points_commands::PointsCommands;
 use achievements::AchievementSystem;
 use achievement_commands::AchievementCommands;
 use filter_commands::FilterCommands; // NEW
+use enhanced_moderation::EnhancedModerationSystem;
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
@@ -64,7 +68,13 @@ impl ChatBot {
             achievement_commands,
             filter_commands, // NEW
         }
+
     }
+
+    pub fn create_enhanced_moderation(&self) -> EnhancedModerationSystem {
+        EnhancedModerationSystem::new(self.moderation_system.clone())
+    }        
+
 
     /// Set the command prefix (default is "!")
     pub async fn set_command_prefix(&self, prefix: String) {

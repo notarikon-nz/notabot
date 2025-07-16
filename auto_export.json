@@ -1,0 +1,223 @@
+{
+  "version": "2.0",
+  "exported_at": "2025-07-16T03:43:28.497477021Z",
+  "exported_by": "NotaBot AI System",
+  "bot_version": "2.0.0",
+  "description": "AI-optimized filter pack with real-time effectiveness metrics",
+  "tags": [
+    "ai",
+    "community",
+    "optimized"
+  ],
+  "filters": [
+    {
+      "name": "blacklist_1752637408",
+      "filter_type": {
+        "Blacklist": {
+          "patterns": [
+            {
+              "Wildcard": "*!!!!!*"
+            },
+            {
+              "Wildcard": "*?????*"
+            },
+            {
+              "Wildcard": "*.....*"
+            },
+            {
+              "Wildcard": "*-----*"
+            },
+            {
+              "Wildcard": "*=====*"
+            },
+            {
+              "Wildcard": "*hahaha*"
+            },
+            {
+              "Wildcard": "*hehehe*"
+            },
+            {
+              "Wildcard": "*lololo*"
+            },
+            {
+              "Wildcard": "*woooo*"
+            },
+            {
+              "Regex": {
+                "pattern": "!{3,}",
+                "flags": ""
+              }
+            },
+            {
+              "Regex": {
+                "pattern": "\\?{3,}",
+                "flags": ""
+              }
+            },
+            {
+              "Regex": {
+                "pattern": "\\.{3,}",
+                "flags": ""
+              }
+            },
+            {
+              "Regex": {
+                "pattern": "a{5,}",
+                "flags": ""
+              }
+            },
+            {
+              "Regex": {
+                "pattern": "e{5,}",
+                "flags": ""
+              }
+            },
+            {
+              "Regex": {
+                "pattern": "o{5,}",
+                "flags": ""
+              }
+            }
+          ],
+          "case_sensitive": false,
+          "whole_words_only": false
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "🤖 Excessive repetition detected. Please use normal text."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 180
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "🤖 Excessive repetition detected. Please use normal text.",
+      "created_at": "2025-07-16T03:43:28.497467062Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
+    {
+      "name": "ai_caps_detection",
+      "filter_type": {
+        "ExcessiveCaps": {
+          "max_percentage": 60
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "🤖 AI detected excessive caps. Please use normal text formatting."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "🤖 AI detected excessive caps. Please use normal text formatting.",
+      "created_at": "2025-07-16T03:43:28.497470589Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
+    {
+      "name": "ai_symbol_spam",
+      "filter_type": {
+        "SymbolSpam": {
+          "max_percentage": 50
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "🤖 Please reduce symbol usage for better readability."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Regular",
+      "silent_mode": true,
+      "custom_message": "🤖 Please reduce symbol usage for better readability.",
+      "created_at": "2025-07-16T03:43:28.497472172Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
+    {
+      "name": "ai_rate_limiting",
+      "filter_type": {
+        "RateLimit": {
+          "max_messages": 4,
+          "window_seconds": 15
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "🤖 Please slow down your messages to maintain chat quality."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "🤖 Please slow down your messages to maintain chat quality.",
+      "created_at": "2025-07-16T03:43:28.497476540Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    }
+  ],
+  "metadata": {
+    "total_filters": 4,
+    "filter_types": {
+      "SymbolSpam ": 1,
+      "ExcessiveCaps ": 1,
+      "Blacklist ": 1,
+      "RateLimit ": 1
+    },
+    "estimated_accuracy": 0.9,
+    "recommended_for": [
+      "gaming",
+      "general"
+    ],
+    "compatibility": [
+      "notabot",
+      "twitch",
+      "youtube"
+    ],
+    "author": "NotaBot Community",
+    "license": "Creative Commons",
+    "update_url": "https://github.com/notarikon-nz/notabot/releases"
+  }
+}

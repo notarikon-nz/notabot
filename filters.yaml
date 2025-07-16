@@ -1,0 +1,157 @@
+version: '1.0'
+description: NotaBot AI-Enhanced Filter Configuration - Edit this file to update filters without rebuilding!
+blacklist_filters:
+- name: crypto_spam
+  enabled: true
+  patterns:
+  - '*free money*'
+  - '*easy money*'
+  - '*crypto investment*'
+  - '*bitcoin profit*'
+  - '*guaranteed return*'
+  - '*100% profit*'
+  - ~/(?i)(free|easy)\s*(money|crypto|bitcoin|eth)/
+  - ~/(?i)(guaranteed|100%)\s*(profit|return|roi)/
+  - ~/(?i)(invest|trade)\s*(now|today|immediately)/
+  timeout_seconds: 1800
+  exemption_level: Regular
+  case_sensitive: false
+  whole_words_only: false
+  custom_message: 🤖 Crypto spam detected. Appeal with !appeal if this was a mistake.
+  silent_mode: false
+  tags:
+  - crypto
+  - financial
+  - spam
+- name: social_manipulation
+  enabled: true
+  patterns:
+  - '*follow for follow*'
+  - '*f4f*'
+  - '*sub4sub*'
+  - '*like4like*'
+  - '*check out my channel*'
+  - '*visit my stream*'
+  - ~/(?i)(follow|sub)\s*(for|4)\s*(follow|sub)/
+  - ~/(?i)(view|like)\s*(for|4)\s*(view|like)/
+  - ~/(?i)check\s*(out|my)\s*(channel|stream)/
+  timeout_seconds: 600
+  exemption_level: Subscriber
+  case_sensitive: false
+  whole_words_only: false
+  custom_message: 🤖 Social manipulation detected. Please engage naturally.
+  silent_mode: false
+  tags:
+  - social
+  - manipulation
+- name: impersonation
+  enabled: true
+  patterns:
+  - '*official support*'
+  - '*admin team*'
+  - '*moderator here*'
+  - '*staff member*'
+  - '*twitch support*'
+  - '*youtube support*'
+  - staff*
+  - admin*
+  - official*
+  - '*support*'
+  timeout_seconds: 3600
+  exemption_level: Moderator
+  case_sensitive: false
+  whole_words_only: false
+  custom_message: 🚨 Impersonation attempt detected. This is a serious violation.
+  silent_mode: false
+  tags:
+  - impersonation
+  - security
+- name: urls_and_links
+  enabled: true
+  patterns:
+  - '*discord.gg/*'
+  - '*bit.ly/*'
+  - '*tinyurl.com/*'
+  - '*shortened.link/*'
+  - ~/(?i)https?:\/\/[^\s]+/
+  timeout_seconds: 300
+  exemption_level: Regular
+  case_sensitive: false
+  whole_words_only: false
+  custom_message: 🤖 Unauthorized link detected. Please ask before sharing links.
+  silent_mode: true
+  tags:
+  - urls
+  - links
+- name: excessive_repetition
+  enabled: true
+  patterns:
+  - '*!!!!!*'
+  - '*?????*'
+  - '*.....*'
+  - '*-----*'
+  - '*=====*'
+  - '*hahaha*'
+  - '*hehehe*'
+  - '*lololo*'
+  - '*woooo*'
+  - ~/!{3,}/
+  - ~/\?{3,}/
+  - ~/\.{3,}/
+  - ~/a{5,}/
+  - ~/e{5,}/
+  - ~/o{5,}/
+  timeout_seconds: 180
+  exemption_level: Subscriber
+  case_sensitive: false
+  whole_words_only: false
+  custom_message: 🤖 Excessive repetition detected. Please use normal text.
+  silent_mode: true
+  tags:
+  - repetition
+  - spam
+spam_filters:
+- name: excessive_caps
+  enabled: true
+  filter_type: ExcessiveCaps
+  parameters:
+    max_percentage: 60
+  timeout_seconds: 300
+  exemption_level: Subscriber
+  custom_message: 🤖 Please reduce the use of capital letters.
+  silent_mode: false
+- name: symbol_spam
+  enabled: true
+  filter_type: SymbolSpam
+  parameters:
+    max_percentage: 50
+  timeout_seconds: 300
+  exemption_level: Regular
+  custom_message: 🤖 Please reduce symbol usage for better readability.
+  silent_mode: true
+- name: rate_limiting
+  enabled: true
+  filter_type: RateLimit
+  parameters:
+    max_messages: 4
+    window_seconds: 15
+  timeout_seconds: 300
+  exemption_level: Subscriber
+  custom_message: 🤖 Please slow down your messages.
+  silent_mode: false
+advanced_patterns:
+- name: crypto_fuzzy
+  enabled: true
+  pattern_type: FuzzyMatch
+  parameters:
+    pattern: cryptocurrency
+    threshold: 0.7
+- name: spam_leetspeak
+  enabled: true
+  pattern_type: Leetspeak
+  parameters:
+    pattern: spam
+- name: zalgo_detection
+  enabled: true
+  pattern_type: ZalgoText
+  parameters: {}

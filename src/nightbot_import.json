@@ -1,0 +1,65 @@
+{
+  "blacklist": {
+    "enabled": true,
+    "list": [
+      "badword",
+      "spam*",
+      "*toxic*",
+      "scam",
+      "~/\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/",
+      "~/(?i)(buy|sell|cheap).*gold/",
+      "~/discord\\.gg\\/(?!official)/",
+      "~/\\b[A-Z]{3,}\\s+[A-Z]{3,}/",
+      "~/(..)\\1{4,}/",
+      "hate*",
+      "*racism*",
+      "trolling",
+      "griefing",
+      "*viewbot*",
+      "*bot*spam*",
+      "fake*giveaway*",
+      "*phishing*",
+      "suspicious*link*"
+    ],
+    "timeout": 600,
+    "exempt": "moderator",
+    "silent": false,
+    "message": "Please watch your language and follow chat rules!"
+  },
+  "spam": {
+    "enabled": true,
+    "caps": {
+      "enabled": true,
+      "max": 70,
+      "timeout": 300,
+      "exempt": "subscriber"
+    },
+    "symbols": {
+      "enabled": true,
+      "max": 50,
+      "timeout": 300,
+      "exempt": "subscriber"
+    },
+    "emotes": {
+      "enabled": true,
+      "max": 5,
+      "timeout": 300,
+      "exempt": "regular"
+    },
+    "links": {
+      "enabled": true,
+      "whitelist": [
+        "discord.gg/official",
+        "youtube.com",
+        "twitch.tv",
+        "twitter.com"
+      ],
+      "timeout": 600,
+      "exempt": "moderator"
+    }
+  },
+  "exported_from": "nightbot",
+  "version": "nightbot_1.0",
+  "export_date": "2024-12-19T00:00:00Z",
+  "notes": "Example NightBot configuration for import testing. Replace with your actual NightBot export."
+}

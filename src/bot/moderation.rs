@@ -1,5 +1,3 @@
-// src/bot/moderation.rs - Enhanced moderation system with NightBot parity
-
 use anyhow::Result;
 use log::{error, info, warn, debug};
 use std::collections::HashMap;

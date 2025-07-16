@@ -1,6 +1,8 @@
-// src/types/mod.rs - Enhanced spam filter types for NightBot parity
-
 use serde::{Deserialize, Serialize};
+use std::path::Path;
+use anyhow::Result;
+use tokio::fs;
+
 use regex::Regex;
 
 /// Core message types that flow through the bot system
@@ -71,6 +73,61 @@ pub enum BlacklistPattern {
     Wildcard(String),
     /// Regex pattern: ~/pattern/flags
     Regex { pattern: String, compiled: Option<Regex> },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterConfig {
+    pub version: String,
+    pub description: String,
+    pub blacklist_filters: Vec<BlacklistFilterConfig>,
+    pub spam_filters: Vec<SpamFilterConfig>,
+    pub advanced_patterns: Vec<AdvancedPatternConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlacklistFilterConfig {
+    pub name: String,
+    pub enabled: bool,
+    pub patterns: Vec<String>,
+    pub timeout_seconds: Option<u64>,
+    pub exemption_level: String, // "None", "Subscriber", "Regular", "Moderator", "Owner"
+    pub case_sensitive: Option<bool>,
+    pub whole_words_only: Option<bool>,
+    pub custom_message: Option<String>,
+    pub silent_mode: Option<bool>,
+    pub tags: Vec<String>, // For categorization: ["crypto", "spam", "urls", etc.]
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpamFilterConfig {
+    pub name: String,
+    pub enabled: bool,
+    pub filter_type: String, // "ExcessiveCaps", "SymbolSpam", "RateLimit", etc.
+    pub parameters: serde_json::Value, // Flexible parameters for different filter types
+    pub timeout_seconds: u64,
+    pub exemption_level: String,
+    pub custom_message: Option<String>,
+    pub silent_mode: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AdvancedPatternConfig {
+    pub name: String,
+    pub enabled: bool,
+    pub pattern_type: String, // "FuzzyMatch", "Leetspeak", "ZalgoText", etc.
+    pub parameters: serde_json::Value,
+}
+
+impl Default for FilterConfig {
+    fn default() -> Self {
+        Self {
+            version: "1.0".to_string(),
+            description: "NotaBot AI-Enhanced Filter Configuration".to_string(),
+            blacklist_filters: Vec::new(),
+            spam_filters: Vec::new(),
+            advanced_patterns: Vec::new(),
+        }
+    }
 }
 
 impl BlacklistPattern {
@@ -173,6 +230,8 @@ impl BlacklistPattern {
     }
 }
 
+
+
 /// Enhanced spam filter with escalation support
 #[derive(Debug, Clone)]
 pub struct SpamFilter {
@@ -240,7 +299,7 @@ impl ExemptionLevel {
 }
 
 /// Enhanced moderation actions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ModerationAction {
     DeleteMessage,
     TimeoutUser { duration_seconds: u64 },
@@ -312,6 +371,314 @@ impl UserMessageHistory {
             last_warning: None,
             violation_count: 0,
             violation_history: UserViolationHistory::new(user_id),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FilterConfigManager {
+    config_path: std::path::PathBuf,
+    current_config: FilterConfig,
+}
+
+impl FilterConfigManager {
+    pub fn new<P: AsRef<Path>>(config_path: P) -> Self {
+        Self {
+            config_path: config_path.as_ref().to_path_buf(),
+            current_config: FilterConfig::default(),
+        }
+    }
+
+    /// Load filter configuration from file
+    pub async fn load_config(&mut self) -> Result<()> {
+        if !self.config_path.exists() {
+            // Create default config file if it doesn't exist
+            self.create_default_config().await?;
+        }
+
+        let content = fs::read_to_string(&self.config_path).await?;
+        
+        // Try JSON first, then YAML as fallback
+        self.current_config = if self.config_path.extension()
+            .and_then(|ext| ext.to_str()) == Some("json") {
+            serde_json::from_str(&content)?
+        } else {
+            serde_yaml::from_str(&content)?
+        };
+
+        log::info!("Loaded filter config from {}", self.config_path.display());
+        Ok(())
+    }
+
+    /// Save current configuration to file
+    pub async fn save_config(&self) -> Result<()> {
+        let content = if self.config_path.extension()
+            .and_then(|ext| ext.to_str()) == Some("json") {
+            serde_json::to_string_pretty(&self.current_config)?
+        } else {
+            serde_yaml::to_string(&self.current_config)?
+        };
+
+        fs::write(&self.config_path, content).await?;
+        log::info!("Saved filter config to {}", self.config_path.display());
+        Ok(())
+    }
+
+    /// Create a comprehensive default configuration file
+    async fn create_default_config(&mut self) -> Result<()> {
+        self.current_config = FilterConfig {
+            version: "1.0".to_string(),
+            description: "NotaBot AI-Enhanced Filter Configuration - Edit this file to update filters without rebuilding!".to_string(),
+            blacklist_filters: vec![
+                BlacklistFilterConfig {
+                    name: "crypto_spam".to_string(),
+                    enabled: true,
+                    patterns: vec![
+                        "*free money*".to_string(),
+                        "*easy money*".to_string(),
+                        "*crypto investment*".to_string(),
+                        "*bitcoin profit*".to_string(),
+                        "*guaranteed return*".to_string(),
+                        "*100% profit*".to_string(),
+                        "~/(?i)(free|easy)\\s*(money|crypto|bitcoin|eth)/".to_string(),
+                        "~/(?i)(guaranteed|100%)\\s*(profit|return|roi)/".to_string(),
+                        "~/(?i)(invest|trade)\\s*(now|today|immediately)/".to_string(),
+                    ],
+                    timeout_seconds: Some(1800), // 30 minutes
+                    exemption_level: "Regular".to_string(),
+                    case_sensitive: Some(false),
+                    whole_words_only: Some(false),
+                    custom_message: Some("🤖 Crypto spam detected. Appeal with !appeal if this was a mistake.".to_string()),
+                    silent_mode: Some(false),
+                    tags: vec!["crypto".to_string(), "financial".to_string(), "spam".to_string()],
+                },
+                BlacklistFilterConfig {
+                    name: "social_manipulation".to_string(),
+                    enabled: true,
+                    patterns: vec![
+                        "*follow for follow*".to_string(),
+                        "*f4f*".to_string(),
+                        "*sub4sub*".to_string(),
+                        "*like4like*".to_string(),
+                        "*check out my channel*".to_string(),
+                        "*visit my stream*".to_string(),
+                        "~/(?i)(follow|sub)\\s*(for|4)\\s*(follow|sub)/".to_string(),
+                        "~/(?i)(view|like)\\s*(for|4)\\s*(view|like)/".to_string(),
+                        "~/(?i)check\\s*(out|my)\\s*(channel|stream)/".to_string(),
+                    ],
+                    timeout_seconds: Some(600), // 10 minutes
+                    exemption_level: "Subscriber".to_string(),
+                    case_sensitive: Some(false),
+                    whole_words_only: Some(false),
+                    custom_message: Some("🤖 Social manipulation detected. Please engage naturally.".to_string()),
+                    silent_mode: Some(false),
+                    tags: vec!["social".to_string(), "manipulation".to_string()],
+                },
+                BlacklistFilterConfig {
+                    name: "impersonation".to_string(),
+                    enabled: true,
+                    patterns: vec![
+                        "*official support*".to_string(),
+                        "*admin team*".to_string(),
+                        "*moderator here*".to_string(),
+                        "*staff member*".to_string(),
+                        "*twitch support*".to_string(),
+                        "*youtube support*".to_string(),
+                        "staff*".to_string(),
+                        "admin*".to_string(),
+                        "official*".to_string(),
+                        "*support*".to_string(),
+                    ],
+                    timeout_seconds: Some(3600), // 1 hour
+                    exemption_level: "Moderator".to_string(),
+                    case_sensitive: Some(false),
+                    whole_words_only: Some(false),
+                    custom_message: Some("🚨 Impersonation attempt detected. This is a serious violation.".to_string()),
+                    silent_mode: Some(false),
+                    tags: vec!["impersonation".to_string(), "security".to_string()],
+                },
+                BlacklistFilterConfig {
+                    name: "urls_and_links".to_string(),
+                    enabled: true,
+                    patterns: vec![
+                        "*discord.gg/*".to_string(),
+                        "*bit.ly/*".to_string(),
+                        "*tinyurl.com/*".to_string(),
+                        "*shortened.link/*".to_string(),
+                        "~/(?i)https?:\\/\\/[^\\s]+/".to_string(),
+                    ],
+                    timeout_seconds: Some(300), // 5 minutes
+                    exemption_level: "Regular".to_string(),
+                    case_sensitive: Some(false),
+                    whole_words_only: Some(false),
+                    custom_message: Some("🤖 Unauthorized link detected. Please ask before sharing links.".to_string()),
+                    silent_mode: Some(true),
+                    tags: vec!["urls".to_string(), "links".to_string()],
+                },
+                BlacklistFilterConfig {
+                    name: "excessive_repetition".to_string(),
+                    enabled: true,
+                    patterns: vec![
+                        "*!!!!!*".to_string(),
+                        "*?????*".to_string(),
+                        "*.....*".to_string(),
+                        "*-----*".to_string(),
+                        "*=====*".to_string(),
+                        "*hahaha*".to_string(),
+                        "*hehehe*".to_string(),
+                        "*lololo*".to_string(),
+                        "*woooo*".to_string(),
+                        "~/!{3,}/".to_string(),
+                        "~/\\?{3,}/".to_string(),
+                        "~/\\.{3,}/".to_string(),
+                        "~/a{5,}/".to_string(),
+                        "~/e{5,}/".to_string(),
+                        "~/o{5,}/".to_string(),
+                    ],
+                    timeout_seconds: Some(180), // 3 minutes
+                    exemption_level: "Subscriber".to_string(),
+                    case_sensitive: Some(false),
+                    whole_words_only: Some(false),
+                    custom_message: Some("🤖 Excessive repetition detected. Please use normal text.".to_string()),
+                    silent_mode: Some(true),
+                    tags: vec!["repetition".to_string(), "spam".to_string()],
+                },
+            ],
+            spam_filters: vec![
+                SpamFilterConfig {
+                    name: "excessive_caps".to_string(),
+                    enabled: true,
+                    filter_type: "ExcessiveCaps".to_string(),
+                    parameters: serde_json::json!({"max_percentage": 60}),
+                    timeout_seconds: 300,
+                    exemption_level: "Subscriber".to_string(),
+                    custom_message: Some("🤖 Please reduce the use of capital letters.".to_string()),
+                    silent_mode: false,
+                },
+                SpamFilterConfig {
+                    name: "symbol_spam".to_string(),
+                    enabled: true,
+                    filter_type: "SymbolSpam".to_string(),
+                    parameters: serde_json::json!({"max_percentage": 50}),
+                    timeout_seconds: 300,
+                    exemption_level: "Regular".to_string(),
+                    custom_message: Some("🤖 Please reduce symbol usage for better readability.".to_string()),
+                    silent_mode: true,
+                },
+                SpamFilterConfig {
+                    name: "rate_limiting".to_string(),
+                    enabled: true,
+                    filter_type: "RateLimit".to_string(),
+                    parameters: serde_json::json!({"max_messages": 4, "window_seconds": 15}),
+                    timeout_seconds: 300,
+                    exemption_level: "Subscriber".to_string(),
+                    custom_message: Some("🤖 Please slow down your messages.".to_string()),
+                    silent_mode: false,
+                },
+            ],
+            advanced_patterns: vec![
+                AdvancedPatternConfig {
+                    name: "crypto_fuzzy".to_string(),
+                    enabled: true,
+                    pattern_type: "FuzzyMatch".to_string(),
+                    parameters: serde_json::json!({"pattern": "cryptocurrency", "threshold": 0.7}),
+                },
+                AdvancedPatternConfig {
+                    name: "spam_leetspeak".to_string(),
+                    enabled: true,
+                    pattern_type: "Leetspeak".to_string(),
+                    parameters: serde_json::json!({"pattern": "spam"}),
+                },
+                AdvancedPatternConfig {
+                    name: "zalgo_detection".to_string(),
+                    enabled: true,
+                    pattern_type: "ZalgoText".to_string(),
+                    parameters: serde_json::json!({}),
+                },
+            ],
+        };
+
+        self.save_config().await?;
+        log::info!("Created default filter configuration at {}", self.config_path.display());
+        Ok(())
+    }
+
+    /// Get current configuration
+    pub fn get_config(&self) -> &FilterConfig {
+        &self.current_config
+    }
+
+    /// Update a blacklist filter by name
+    pub async fn update_blacklist_filter(&mut self, name: &str, filter: BlacklistFilterConfig) -> Result<()> {
+        if let Some(existing) = self.current_config.blacklist_filters.iter_mut().find(|f| f.name == name) {
+            *existing = filter;
+        } else {
+            self.current_config.blacklist_filters.push(filter);
+        }
+        self.save_config().await
+    }
+
+    /// Remove a blacklist filter by name
+    pub async fn remove_blacklist_filter(&mut self, name: &str) -> Result<bool> {
+        let initial_len = self.current_config.blacklist_filters.len();
+        self.current_config.blacklist_filters.retain(|f| f.name != name);
+        let removed = self.current_config.blacklist_filters.len() != initial_len;
+        if removed {
+            self.save_config().await?;
+        }
+        Ok(removed)
+    }
+
+    /// Enable/disable a filter by name
+    pub async fn toggle_filter(&mut self, name: &str, enabled: bool) -> Result<bool> {
+        let mut found = false;
+        
+        for filter in &mut self.current_config.blacklist_filters {
+            if filter.name == name {
+                filter.enabled = enabled;
+                found = true;
+                break;
+            }
+        }
+        
+        if !found {
+            for filter in &mut self.current_config.spam_filters {
+                if filter.name == name {
+                    filter.enabled = enabled;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if found {
+            self.save_config().await?;
+        }
+        Ok(found)
+    }
+
+    /// Watch for file changes and reload automatically
+    pub async fn watch_for_changes(&mut self) -> Result<()> {
+        use tokio::time::{sleep, Duration};
+        
+        let mut last_modified = std::fs::metadata(&self.config_path)?.modified()?;
+        
+        loop {
+            sleep(Duration::from_secs(5)).await; // Check every 5 seconds
+            
+            if let Ok(metadata) = std::fs::metadata(&self.config_path) {
+                if let Ok(modified) = metadata.modified() {
+                    if modified > last_modified {
+                        log::info!("Filter config file changed, reloading...");
+                        if let Err(e) = self.load_config().await {
+                            log::error!("Failed to reload config: {}", e);
+                        } else {
+                            log::info!("Filter config reloaded successfully");
+                        }
+                        last_modified = modified;
+                    }
+                }
+            }
         }
     }
 }

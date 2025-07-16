@@ -1,11 +1,9 @@
-// src/bot/filter_commands.rs - Chat-based filter management (NightBot parity)
-
 use anyhow::Result;
 use log::{warn, info};
 use std::sync::Arc;
 
 use crate::bot::moderation::ModerationSystem;
-use crate::types::{ChatMessage, SpamFilterType, BlacklistPattern, ExemptionLevel, ModerationEscalation, ModerationAction};
+use crate::types::{ChatMessage, SpamFilterType, ExemptionLevel, ModerationEscalation, ModerationAction};
 
 pub struct FilterCommands {
     moderation_system: Arc<ModerationSystem>,

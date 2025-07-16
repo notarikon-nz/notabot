@@ -1,0 +1,218 @@
+# NotaBot Configuration File
+# AI-Powered Chat Moderation System
+# Version 2.0 - Phase 2 Enhanced
+
+[bot]
+name = "NotaBot"
+version = "2.0.0"
+command_prefix = "!"
+description = "AI-powered chat moderation system - The NightBot killer"
+
+[ai]
+# Enable Phase 2 AI features
+enhanced_features = true
+learning_mode = true
+auto_optimization = false  # Disabled by default for safety
+pattern_matching = true
+smart_escalation = true
+real_time_analytics = true
+
+# AI Performance Settings
+fuzzy_matching_threshold = 0.8
+leetspeak_detection = true
+unicode_normalization = true
+homoglyph_detection = true
+zalgo_detection = true
+encoded_content_scanning = true
+
+# Learning and Optimization
+feedback_learning = true
+community_intelligence = true
+auto_export_filters = true
+pattern_evolution_tracking = true
+
+[moderation]
+# Enhanced moderation settings
+global_enabled = true
+smart_escalation_threshold = 2
+forgiveness_period_days = 14
+rehabilitation_enabled = true
+context_sensitive = true
+
+# Default exemption levels
+default_exemption = "Moderator"
+subscriber_bonus = true
+regular_user_detection = true
+account_age_consideration = true
+
+[escalation]
+# Smart escalation configuration
+history_weight = 0.4
+community_reports = true
+violation_window_hours = 24
+auto_forgiveness = true
+
+# Escalation levels
+[escalation.levels]
+first_offense = { action = "warn", message = "🤖 Please follow chat rules (AI warning)" }
+second_offense = { action = "timeout", duration = 300 }
+third_offense = { action = "timeout", duration = 1800 }
+persistent_offense = { action = "timeout", duration = 7200 }
+
+[filters]
+# Default filter settings
+auto_load_community_pack = true
+nightbot_import_on_startup = true
+export_interval_hours = 6
+
+# Performance settings
+max_response_time_ms = 5.0
+parallel_processing = true
+cache_patterns = true
+optimization_interval_minutes = 30
+
+[analytics]
+# Real-time analytics configuration
+enabled = true
+dashboard_port = 3000
+update_interval_seconds = 5
+retention_days = 30
+
+# Metrics collection
+performance_monitoring = true
+effectiveness_tracking = true
+user_satisfaction_monitoring = true
+false_positive_detection = true
+
+# Alert thresholds
+accuracy_warning = 0.85
+accuracy_critical = 0.70
+false_positive_threshold = 0.15
+response_time_alert_ms = 50.0
+
+[points]
+# Points system configuration
+enabled = true
+points_per_message = 1
+points_per_command = 2
+watching_interval_minutes = 5
+points_per_interval = 10
+daily_bonus = 100
+first_time_bonus = 500
+max_points_per_hour = 200
+
+# Multipliers
+subscriber_multiplier = 1.5
+moderator_multiplier = 2.0
+regular_user_bonus = 1.25
+
+[achievements]
+# Achievement system
+enabled = true
+auto_unlock = true
+bonus_points = true
+announcement_enabled = true
+progression_tracking = true
+
+[timers]
+# Timer system configuration
+enabled = true
+minimum_interval_seconds = 30
+variable_substitution = true
+platform_targeting = true
+auto_optimization = true
+
+[web]
+# Web dashboard settings
+enabled = true
+port = 3000
+cors_enabled = true
+real_time_updates = true
+analytics_dashboard = true
+filter_management = true
+
+[import_export]
+# Filter import/export settings
+auto_backup = true
+backup_interval_hours = 12
+community_sharing = true
+version_compatibility_check = true
+
+# Supported formats
+formats = ["json", "yaml", "toml", "nightbot", "compressed"]
+default_export_format = "json"
+
+[platforms]
+# Platform-specific settings
+
+[platforms.twitch]
+enabled = true
+auto_connect = true
+# Set these in environment variables:
+# TWITCH_USERNAME, TWITCH_OAUTH_TOKEN, TWITCH_CHANNELS
+
+[platforms.youtube]
+enabled = true
+auto_connect = true
+# Set these in environment variables:
+# YOUTUBE_API_KEY, YOUTUBE_OAUTH_TOKEN, YOUTUBE_LIVE_CHAT_ID
+
+[platforms.discord]
+enabled = false  # Future platform
+auto_connect = false
+
+[logging]
+# Logging configuration
+level = "info"
+ai_decisions = true
+performance_metrics = true
+user_interactions = true
+filter_effectiveness = true
+
+# Log file settings
+file_logging = true
+log_rotation = true
+max_file_size_mb = 10
+keep_logs_days = 7
+
+[security]
+# Security settings
+rate_limiting = true
+api_authentication = false  # For future API access
+encryption = false  # For future sensitive data
+audit_logging = true
+
+[experimental]
+# Experimental features (use with caution)
+machine_learning_optimization = false
+predictive_moderation = false
+cross_platform_learning = true
+advanced_pattern_generation = false
+
+# Performance experiments
+jit_compilation = false
+gpu_acceleration = false
+distributed_processing = false
+
+[community]
+# Community features
+filter_sharing = true
+effectiveness_reporting = true
+anonymous_analytics = true
+community_voting = false  # Future feature
+
+# Update settings
+auto_update_filters = false
+community_pack_updates = true
+security_updates = true
+
+[compatibility]
+# Compatibility settings
+nightbot_migration = true
+streamlabs_support = false  # Future
+obs_integration = false     # Future
+streamdeck_support = false  # Future
+
+# Legacy support
+deprecated_features = false
+backwards_compatibility = true
