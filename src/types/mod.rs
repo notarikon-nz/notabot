@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use anyhow::Result;
 use tokio::fs;
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
 
 use regex::Regex;
 
@@ -231,8 +233,6 @@ impl BlacklistPattern {
     }
 }
 
-
-
 /// Enhanced spam filter with escalation support
 #[derive(Debug, Clone)]
 pub struct SpamFilter {
@@ -427,6 +427,7 @@ impl FilterConfigManager {
 
     /// Create a comprehensive default configuration file
     async fn create_default_config(&mut self) -> Result<()> {
+        // Remove emoji usage as requested
         self.current_config = FilterConfig {
             version: "1.0".to_string(),
             description: "NotaBot AI-Enhanced Filter Configuration - Edit this file to update filters without rebuilding!".to_string(),
@@ -449,7 +450,7 @@ impl FilterConfigManager {
                     exemption_level: "Regular".to_string(),
                     case_sensitive: Some(false),
                     whole_words_only: Some(false),
-                    custom_message: Some("🤖 Crypto spam detected. Appeal with !appeal if this was a mistake.".to_string()),
+                    custom_message: Some("Crypto spam detected. Appeal with !appeal if this was a mistake.".to_string()),
                     silent_mode: Some(false),
                     tags: vec!["crypto".to_string(), "financial".to_string(), "spam".to_string()],
                 },
@@ -471,7 +472,7 @@ impl FilterConfigManager {
                     exemption_level: "Subscriber".to_string(),
                     case_sensitive: Some(false),
                     whole_words_only: Some(false),
-                    custom_message: Some("🤖 Social manipulation detected. Please engage naturally.".to_string()),
+                    custom_message: Some("Social manipulation detected. Please engage naturally.".to_string()),
                     silent_mode: Some(false),
                     tags: vec!["social".to_string(), "manipulation".to_string()],
                 },
@@ -494,7 +495,7 @@ impl FilterConfigManager {
                     exemption_level: "Moderator".to_string(),
                     case_sensitive: Some(false),
                     whole_words_only: Some(false),
-                    custom_message: Some("🚨 Impersonation attempt detected. This is a serious violation.".to_string()),
+                    custom_message: Some("Impersonation attempt detected. This is a serious violation.".to_string()),
                     silent_mode: Some(false),
                     tags: vec!["impersonation".to_string(), "security".to_string()],
                 },
@@ -512,7 +513,7 @@ impl FilterConfigManager {
                     exemption_level: "Regular".to_string(),
                     case_sensitive: Some(false),
                     whole_words_only: Some(false),
-                    custom_message: Some("🤖 Unauthorized link detected. Please ask before sharing links.".to_string()),
+                    custom_message: Some("Unauthorized link detected. Please ask before sharing links.".to_string()),
                     silent_mode: Some(true),
                     tags: vec!["urls".to_string(), "links".to_string()],
                 },
@@ -540,7 +541,7 @@ impl FilterConfigManager {
                     exemption_level: "Subscriber".to_string(),
                     case_sensitive: Some(false),
                     whole_words_only: Some(false),
-                    custom_message: Some("🤖 Excessive repetition detected. Please use normal text.".to_string()),
+                    custom_message: Some("Excessive repetition detected. Please use normal text.".to_string()),
                     silent_mode: Some(true),
                     tags: vec!["repetition".to_string(), "spam".to_string()],
                 },
@@ -553,7 +554,7 @@ impl FilterConfigManager {
                     parameters: serde_json::json!({"max_percentage": 60}),
                     timeout_seconds: 300,
                     exemption_level: "Subscriber".to_string(),
-                    custom_message: Some("🤖 Please reduce the use of capital letters.".to_string()),
+                    custom_message: Some("Please reduce the use of capital letters.".to_string()),
                     silent_mode: false,
                 },
                 SpamFilterConfig {
@@ -563,7 +564,7 @@ impl FilterConfigManager {
                     parameters: serde_json::json!({"max_percentage": 50}),
                     timeout_seconds: 300,
                     exemption_level: "Regular".to_string(),
-                    custom_message: Some("🤖 Please reduce symbol usage for better readability.".to_string()),
+                    custom_message: Some("Please reduce symbol usage for better readability.".to_string()),
                     silent_mode: true,
                 },
                 SpamFilterConfig {
@@ -573,7 +574,7 @@ impl FilterConfigManager {
                     parameters: serde_json::json!({"max_messages": 4, "window_seconds": 15}),
                     timeout_seconds: 300,
                     exemption_level: "Subscriber".to_string(),
-                    custom_message: Some("🤖 Please slow down your messages.".to_string()),
+                    custom_message: Some("Please slow down your messages.".to_string()),
                     silent_mode: false,
                 },
             ],
@@ -834,3 +835,478 @@ impl Default for TimerRules {
     }
 }
 
+/// Different types of giveaways supported by the system
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum GiveawayType {
+    /// Selects from users who have been active in chat during the specified duration
+    ActiveUser { 
+        duration_minutes: u32,
+        min_messages: Option<u32>, // Minimum messages required
+    },
+    /// Users enter by typing a specific keyword
+    Keyword { 
+        keyword: String,
+        case_sensitive: bool,
+        anti_spam: bool, // Prevent multiple entries from same user
+        max_entries_per_user: Option<u32>,
+    },
+    /// Generate random number, first person to type it wins
+    RandomNumber { 
+        min: u32,
+        max: u32,
+        auto_generate: bool, // If true, generates immediately on start
+    },
+}
+
+/// User privilege levels for giveaway eligibility
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum UserLevel {
+    Viewer,        // Regular viewer
+    Subscriber,    // Platform subscriber
+    Regular,       // Long-time community member (based on points/activity)
+    VIP,          // VIP status on platform
+    Moderator,    // Channel moderator
+    Owner,        // Channel owner/broadcaster
+}
+
+impl UserLevel {
+    /// Get numeric priority for user level (higher = more privileged)
+    pub fn priority(&self) -> u8 {
+        match self {
+            UserLevel::Viewer => 0,
+            UserLevel::Regular => 1,
+            UserLevel::Subscriber => 2,
+            UserLevel::VIP => 3,
+            UserLevel::Moderator => 4,
+            UserLevel::Owner => 5,
+        }
+    }
+
+    /// Check if this user level meets the minimum requirement
+    pub fn meets_requirement(&self, required: &UserLevel) -> bool {
+        self.priority() >= required.priority()
+    }
+}
+
+/// Status of an individual user's eligibility for a giveaway
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EligibilityStatus {
+    pub eligible: bool,
+    pub user_level: UserLevel,
+    pub entries: u32,           // Number of entries (for extra luck)
+    pub last_activity: DateTime<Utc>,
+    pub entry_time: Option<DateTime<Utc>>, // When they became eligible
+    pub manual_override: bool,   // Manually toggled by moderator
+    pub fraud_score: f32,       // AI-generated fraud risk (0.0 = safe, 1.0 = suspicious)
+    pub platform: String,       // Which platform they're on
+    pub username: String,
+    pub display_name: Option<String>,
+}
+
+impl EligibilityStatus {
+    pub fn new(username: String, platform: String, user_level: UserLevel) -> Self {
+        Self {
+            eligible: false,
+            user_level,
+            entries: 1,
+            last_activity: Utc::now(),
+            entry_time: None,
+            manual_override: false,
+            fraud_score: 0.0,
+            platform,
+            username,
+            display_name: None,
+        }
+    }
+
+    /// Mark user as eligible with timestamp
+    pub fn make_eligible(&mut self) {
+        if !self.eligible {
+            self.eligible = true;
+            self.entry_time = Some(Utc::now());
+        }
+    }
+
+    /// Remove eligibility
+    pub fn make_ineligible(&mut self) {
+        self.eligible = false;
+        self.entry_time = None;
+    }
+
+    /// Toggle eligibility manually (moderator action)
+    pub fn toggle_eligibility(&mut self) {
+        self.manual_override = true;
+        if self.eligible {
+            self.make_ineligible();
+        } else {
+            self.make_eligible();
+        }
+    }
+
+    /// Calculate total weighted entries based on extra luck
+    pub fn weighted_entries(&self, subscriber_multiplier: f32, regular_multiplier: f32) -> u32 {
+        if !self.eligible {
+            return 0;
+        }
+
+        let base_entries = self.entries as f32;
+        let multiplier = match self.user_level {
+            UserLevel::Subscriber => subscriber_multiplier,
+            UserLevel::Regular => regular_multiplier,
+            _ => 1.0,
+        };
+
+        (base_entries * multiplier).round() as u32
+    }
+}
+
+/// Configuration settings for a giveaway
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GiveawaySettings {
+    pub eligible_user_levels: Vec<UserLevel>,
+    pub subscriber_luck_multiplier: f32,   // Extra entries for subscribers
+    pub regular_luck_multiplier: f32,      // Extra entries for regulars
+    pub min_account_age_days: Option<u32>, // Minimum account age
+    pub min_follow_time_days: Option<u32>, // Minimum follow duration
+    pub exclude_banned_users: bool,
+    pub exclude_timed_out_users: bool,
+    pub fraud_detection_enabled: bool,
+    pub max_fraud_score: f32,              // Users above this score are excluded
+    pub announcement_message: Option<String>,
+    pub winner_announcement: Option<String>,
+}
+
+impl Default for GiveawaySettings {
+    fn default() -> Self {
+        Self {
+            eligible_user_levels: vec![
+                UserLevel::Viewer,
+                UserLevel::Subscriber,
+                UserLevel::Regular,
+                UserLevel::VIP,
+            ],
+            subscriber_luck_multiplier: 2.0,
+            regular_luck_multiplier: 1.5,
+            min_account_age_days: None,
+            min_follow_time_days: None,
+            exclude_banned_users: true,
+            exclude_timed_out_users: true,
+            fraud_detection_enabled: true,
+            max_fraud_score: 0.7,
+            announcement_message: Some("Giveaway started! Check eligibility requirements.".to_string()),
+            winner_announcement: Some("Congratulations to $(winner) for winning the giveaway!".to_string()),
+        }
+    }
+}
+
+/// Information about a giveaway winner
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GiveawayWinner {
+    pub username: String,
+    pub display_name: Option<String>,
+    pub platform: String,
+    pub user_level: UserLevel,
+    pub winning_time: DateTime<Utc>,
+    pub total_entries: u32,
+    pub winning_entry: Option<String>, // The keyword/number they entered
+    pub fraud_score: f32,
+    pub response_time_ms: Option<u64>, // For keyword/number giveaways
+    pub channel_url: Option<String>,
+    pub last_seen: DateTime<Utc>,
+}
+
+impl GiveawayWinner {
+    pub fn new(
+        username: String,
+        platform: String,
+        user_level: UserLevel,
+        total_entries: u32,
+    ) -> Self {
+        Self {
+            username,
+            display_name: None,
+            platform,
+            user_level,
+            winning_time: Utc::now(),
+            total_entries,
+            winning_entry: None,
+            fraud_score: 0.0,
+            response_time_ms: None,
+            channel_url: None,
+            last_seen: Utc::now(),
+        }
+    }
+
+    /// Check if winner is still active (responded recently)
+    pub fn is_active(&self, timeout_minutes: u32) -> bool {
+        let timeout_duration = chrono::Duration::minutes(timeout_minutes as i64);
+        Utc::now().signed_duration_since(self.last_seen) < timeout_duration
+    }
+
+    /// Generate channel URL based on platform
+    pub fn generate_channel_url(&mut self) {
+        self.channel_url = match self.platform.as_str() {
+            "twitch" => Some(format!("https://twitch.tv/{}", self.username)),
+            "youtube" => {
+                // YouTube channel URLs require channel ID, might need different approach
+                Some(format!("https://youtube.com/@{}", self.username))
+            }
+            _ => None,
+        };
+    }
+}
+
+/// Status of a giveaway
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum GiveawayStatus {
+    Preparing,   // Being set up
+    Active,      // Currently running
+    Selecting,   // Choosing winner
+    Completed,   // Finished with winner
+    Cancelled,   // Cancelled before completion
+    Failed,      // Failed due to error
+}
+
+/// A currently active giveaway - Fixed to avoid borrowing issues
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveGiveaway {
+    #[serde(with = "uuid_serde")]
+    pub id: Uuid,
+    pub giveaway_type: GiveawayType,
+    pub settings: GiveawaySettings,
+    pub status: GiveawayStatus,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub eligible_users: HashMap<String, EligibilityStatus>, // Key: platform:username
+    pub winner: Option<GiveawayWinner>,
+    pub participant_count: u32,
+    pub generated_number: Option<u32>, // For random number giveaways
+    pub keyword_entries: HashMap<String, DateTime<Utc>>, // Track keyword entry times
+    pub creator: String, // Who started the giveaway
+    pub channel: String, // Which channel it's running in
+    pub platform: String, // Which platform (or "all" for cross-platform)
+}
+
+// Custom UUID serialization module
+mod uuid_serde {
+    use serde::{Deserialize, Deserializer, Serializer};
+    use uuid::Uuid;
+
+    pub fn serialize<S>(uuid: &Uuid, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&uuid.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Uuid, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Uuid::parse_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl ActiveGiveaway {
+    pub fn new(
+        giveaway_type: GiveawayType,
+        settings: GiveawaySettings,
+        creator: String,
+        channel: String,
+        platform: String,
+    ) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            giveaway_type,
+            settings,
+            status: GiveawayStatus::Preparing,
+            start_time: Utc::now(),
+            end_time: None,
+            eligible_users: HashMap::new(),
+            winner: None,
+            participant_count: 0,
+            generated_number: None,
+            keyword_entries: HashMap::new(),
+            creator,
+            channel,
+            platform,
+        }
+    }
+
+    /// Get user key for internal storage
+    fn user_key(platform: &str, username: &str) -> String {
+        format!("{}:{}", platform, username.to_lowercase())
+    }
+
+    /// Add or update a user's eligibility status
+    pub fn update_user_eligibility(
+        &mut self,
+        username: String,
+        platform: String,
+        user_level: UserLevel,
+        make_eligible: bool,
+    ) {
+        let key = Self::user_key(&platform, &username);
+        
+        // Check eligibility first to avoid double-borrowing
+        let should_make_eligible = make_eligible && self.is_user_eligible_by_level(&user_level);
+        
+        let status = self.eligible_users.entry(key).or_insert_with(|| {
+            EligibilityStatus::new(username.clone(), platform.clone(), user_level.clone())
+        });
+
+        // Update user level (might have changed)
+        status.user_level = user_level;
+        status.last_activity = Utc::now();
+
+        if should_make_eligible {
+            let was_eligible = status.eligible;
+            status.make_eligible();
+            if !was_eligible && status.eligible {
+                self.participant_count += 1;
+            }
+        }
+    }
+
+    /// Check if a user level is eligible for this giveaway
+    pub fn is_user_eligible_by_level(&self, user_level: &UserLevel) -> bool {
+        self.settings.eligible_user_levels.iter()
+            .any(|level| user_level.meets_requirement(level) || level.meets_requirement(user_level))
+    }
+
+    /// Get all currently eligible users
+    pub fn get_eligible_users(&self) -> Vec<&EligibilityStatus> {
+        self.eligible_users.values()
+            .filter(|status| status.eligible && status.fraud_score <= self.settings.max_fraud_score)
+            .collect()
+    }
+
+    /// Get total weighted entries for random selection
+    pub fn get_total_weighted_entries(&self) -> u32 {
+        self.get_eligible_users()
+            .iter()
+            .map(|status| status.weighted_entries(
+                self.settings.subscriber_luck_multiplier,
+                self.settings.regular_luck_multiplier,
+            ))
+            .sum()
+    }
+
+    /// Reset all user eligibility
+    pub fn reset_eligibility(&mut self) {
+        for status in self.eligible_users.values_mut() {
+            status.make_ineligible();
+        }
+        self.participant_count = 0;
+        self.keyword_entries.clear();
+    }
+
+    /// Check if giveaway has timed out (for active user type)
+    pub fn has_timed_out(&self) -> bool {
+        if let GiveawayType::ActiveUser { duration_minutes, .. } = &self.giveaway_type {
+            let duration = chrono::Duration::minutes(*duration_minutes as i64);
+            Utc::now().signed_duration_since(self.start_time) > duration
+        } else {
+            false
+        }
+    }
+
+    /// Mark giveaway as completed with winner
+    pub fn complete_with_winner(&mut self, winner: GiveawayWinner) {
+        self.winner = Some(winner);
+        self.status = GiveawayStatus::Completed;
+        self.end_time = Some(Utc::now());
+    }
+
+    /// Cancel the giveaway
+    pub fn cancel(&mut self, _reason: Option<String>) {
+        self.status = GiveawayStatus::Cancelled;
+        self.end_time = Some(Utc::now());
+        // Could store cancellation reason in metadata if needed
+    }
+}
+
+/// A completed giveaway for historical tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompletedGiveaway {
+    #[serde(with = "uuid_serde")]
+    pub id: Uuid,
+    pub giveaway_type: GiveawayType,
+    pub settings: GiveawaySettings,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub winner: Option<GiveawayWinner>,
+    pub participant_count: u32,
+    pub total_entries: u32,
+    pub success: bool,
+    pub creator: String,
+    pub channel: String,
+    pub platform: String,
+    pub duration_seconds: u64,
+}
+
+impl From<ActiveGiveaway> for CompletedGiveaway {
+    fn from(active: ActiveGiveaway) -> Self {
+        let end_time = active.end_time.unwrap_or_else(Utc::now);
+        let duration_seconds = end_time.signed_duration_since(active.start_time)
+            .num_seconds()
+            .max(0) as u64;
+
+        // Calculate total entries before consuming active
+        let total_entries = active.get_eligible_users()
+            .iter()
+            .map(|status| status.weighted_entries(
+                active.settings.subscriber_luck_multiplier,
+                active.settings.regular_luck_multiplier,
+            ))
+            .sum();
+
+        Self {
+            id: active.id,
+            giveaway_type: active.giveaway_type,
+            settings: active.settings,
+            start_time: active.start_time,
+            end_time,
+            winner: active.winner,
+            participant_count: active.participant_count,
+            total_entries,
+            success: matches!(active.status, GiveawayStatus::Completed),
+            creator: active.creator,
+            channel: active.channel,
+            platform: active.platform,
+            duration_seconds,
+        }
+    }
+}
+
+/// Error types for giveaway operations
+#[derive(Debug, thiserror::Error)]
+pub enum GiveawayError {
+    #[error("No active giveaway")]
+    NoActiveGiveaway,
+    
+    #[error("Giveaway already active")]
+    GiveawayAlreadyActive,
+    
+    #[error("User not eligible: {reason}")]
+    UserNotEligible { reason: String },
+    
+    #[error("Invalid giveaway configuration: {reason}")]
+    InvalidConfiguration { reason: String },
+    
+    #[error("Winner selection failed: {reason}")]
+    WinnerSelectionFailed { reason: String },
+    
+    #[error("Giveaway timeout")]
+    GiveawayTimeout,
+    
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+    
+    #[error("Permission denied: {reason}")]
+    PermissionDenied { reason: String },
+}
+
+/// Result type for giveaway operations
+pub type GiveawayResult<T> = Result<T, GiveawayError>;

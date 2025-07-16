@@ -14,6 +14,8 @@ pub mod commands;
 pub mod enhanced_moderation;
 pub mod filter_commands;
 pub mod filter_import_export;
+pub mod giveaways;
+pub mod giveaway_commands;
 pub mod moderation;
 pub mod pattern_matching;
 pub mod points;
@@ -34,6 +36,9 @@ use achievements::AchievementSystem;
 use achievement_commands::AchievementCommands;
 use filter_commands::FilterCommands;
 use enhanced_moderation::EnhancedModerationSystem;
+use crate::types::{GiveawayType, GiveawaySettings, GiveawayResult, UserLevel, GiveawayWinner, CompletedGiveaway};
+use giveaways::{GiveawaySystem};
+use giveaway_commands::GiveawayCommands;
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
@@ -48,6 +53,7 @@ pub struct ChatBot {
     achievement_system: Arc<AchievementSystem>,
     achievement_commands: Arc<AchievementCommands>,
     filter_commands: Arc<FilterCommands>,
+    giveaway_system: Arc<GiveawaySystem>,
 }
 
 impl ChatBot {
@@ -60,6 +66,7 @@ impl ChatBot {
         let filter_commands = Arc::new(FilterCommands::new(Arc::clone(&moderation_system)));
         let timer_system = Arc::new(TimerSystem::new());
         let timer_commands = Arc::new(TimerCommands::new(Arc::clone(&timer_system)));
+        let giveaway_system = Arc::new(GiveawaySystem::new());
         
         Self {
             connections: Arc::new(RwLock::new(HashMap::new())),
@@ -68,6 +75,7 @@ impl ChatBot {
             timer_commands,
             moderation_system,
             analytics_system: Arc::new(RwLock::new(AnalyticsSystem::new())),
+            giveaway_system,
             points_system,
             points_commands,
             achievement_system,
@@ -415,6 +423,8 @@ impl ChatBot {
         self.analytics_system.read().await.get_analytics().await
     }
 
+
+
     // =================================================================
     // BOT LIFECYCLE
     // =================================================================
@@ -547,7 +557,8 @@ impl ChatBot {
             let achievement_system = Arc::clone(&self.achievement_system);
             let achievement_commands = Arc::clone(&self.achievement_commands);
             let filter_commands = Arc::clone(&self.filter_commands);
-            let timer_commands = Arc::clone(&self.timer_commands); // Add timer commands
+            let timer_commands = Arc::clone(&self.timer_commands); 
+            let giveaway_system = Arc::clone(&self.giveaway_system);
             
             tokio::spawn(async move {
                 loop {
@@ -565,6 +576,11 @@ impl ChatBot {
                                 error!("Failed to process points for message: {}", e);
                             }
                             
+                            // PROCESS GIVEAWAY PARTICIPATION (ADD THIS)
+                            if let Err(e) = giveaway_system.process_message(&message).await {
+                                error!("Failed to process giveaway message: {}", e);
+                            }
+
                             // Check for achievement unlocks after processing points
                             if let Some(user_points) = points_system.get_user_points(&message.platform, &message.username).await {
                                 let unlocked_achievements = achievement_system.check_achievements(&user_points).await;
@@ -770,6 +786,15 @@ impl ChatBot {
             filter_stats.into_iter().collect()
         ));
         
+        // Add giveaway statistics
+        let giveaway_stats = self.get_giveaway_statistics().await;
+        stats.insert("giveaways".to_string(), serde_json::to_value(giveaway_stats)?);
+
+        // Add current giveaway info if active
+        if let Some(current_giveaway) = self.get_giveaway_status().await {
+            stats.insert("current_giveaway".to_string(), serde_json::to_value(current_giveaway)?);
+        }
+        
         Ok(serde_json::Value::Object(stats))
     }
 
@@ -819,6 +844,82 @@ impl ChatBot {
         }
     }
 
+    // =================================================================
+    // GIVEAWAY SYSTEM API
+    // =================================================================
+
+    /// Start a new giveaway
+    pub async fn start_giveaway(
+        &self,
+        giveaway_type: GiveawayType,
+        creator: String,
+        channel: String,
+        platform: String,
+        custom_settings: Option<GiveawaySettings>,
+    ) -> GiveawayResult<uuid::Uuid> {
+        self.giveaway_system.start_giveaway(
+            giveaway_type,
+            creator,
+            channel,
+            platform,
+            custom_settings,
+        ).await
+    }
+
+    /// End the current giveaway and select winner
+    pub async fn end_giveaway(&self, force: bool) -> GiveawayResult<Option<crate::types::GiveawayWinner>> {
+        self.giveaway_system.end_giveaway(force).await
+    }
+
+    /// Cancel the current giveaway
+    pub async fn cancel_giveaway(&self, reason: Option<String>) -> GiveawayResult<()> {
+        self.giveaway_system.cancel_giveaway(reason).await
+    }
+
+    /// Toggle user eligibility (moderator action)
+    pub async fn toggle_giveaway_eligibility(&self, platform: &str, username: &str) -> GiveawayResult<bool> {
+        self.giveaway_system.toggle_user_eligibility(platform, username).await
+    }
+
+    /// Reset all user eligibility
+    pub async fn reset_giveaway_eligibility(&self) -> GiveawayResult<u32> {
+        self.giveaway_system.reset_eligibility().await
+    }
+
+    /// Get current giveaway status
+    pub async fn get_giveaway_status(&self) -> Option<crate::bot::giveaways::GiveawayInfo> {
+        self.giveaway_system.get_giveaway_status().await
+    }
+
+    /// Get list of eligible users
+    pub async fn get_giveaway_eligible_users(&self) -> Vec<crate::bot::giveaways::EligibilityInfo> {
+        self.giveaway_system.get_eligible_users().await
+    }
+
+    /// Get giveaway statistics
+    pub async fn get_giveaway_statistics(&self) -> crate::bot::giveaways::GiveawayStatistics {
+        self.giveaway_system.get_statistics().await
+    }
+
+    /// Get giveaway history
+    pub async fn get_giveaway_history(&self, limit: Option<usize>) -> Vec<crate::types::CompletedGiveaway> {
+        self.giveaway_system.get_history(limit).await
+    }
+
+    /// Update default giveaway settings
+    pub async fn update_giveaway_settings(&self, settings: GiveawaySettings) -> GiveawayResult<()> {
+        self.giveaway_system.update_default_settings(settings).await
+    }
+
+    /// Set fraud score for a user (AI integration)
+    pub async fn set_user_fraud_score(&self, platform: &str, username: &str, score: f32) {
+        self.giveaway_system.set_fraud_score(platform, username, score).await
+    }
+
+    /// Generate random number for random number giveaway
+    pub async fn generate_giveaway_number(&self, min: u32, max: u32) -> GiveawayResult<u32> {
+        self.giveaway_system.generate_random_number(min, max).await
+    }
     /// Gracefully shutdown all connections
     pub async fn shutdown(&mut self) -> Result<()> {
         info!("Shutting down chat bot...");

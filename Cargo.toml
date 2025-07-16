@@ -61,6 +61,14 @@ axum = { version = "0.7", optional = true }
 tower = { version = "0.4", optional = true }
 tower-http = { version = "0.5", features = ["fs", "cors"], optional = true }
 
+# UUID with serde support for giveaway system
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Error handling for giveaways
+thiserror = "1.0"
+
+rand = "0.9.1"
+
 [lib]
 name = "notabot"
 path = "src/lib.rs"

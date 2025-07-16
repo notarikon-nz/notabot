@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exported_at": "2025-07-16T05:53:25.674608420Z",
+  "exported_at": "2025-07-16T07:52:41.118924980Z",
   "exported_by": "NotaBot AI System",
   "bot_version": "2.0.0",
   "description": "AI-optimized filter pack with real-time effectiveness metrics",
@@ -10,6 +10,36 @@
     "optimized"
   ],
   "filters": [
+    {
+      "name": "ai_caps_detection",
+      "filter_type": {
+        "ExcessiveCaps": {
+          "max_percentage": 60
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "AI detected excessive caps. Please use normal text formatting."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "AI detected excessive caps. Please use normal text formatting.",
+      "created_at": "2025-07-16T07:52:41.118890957Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
     {
       "name": "ai_rate_limiting",
       "filter_type": {
@@ -35,14 +65,14 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "Please slow down your messages to maintain chat quality.",
-      "created_at": "2025-07-16T05:53:25.674560379Z",
+      "created_at": "2025-07-16T07:52:41.118895666Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
       ]
     },
     {
-      "name": "blacklist_1752645205",
+      "name": "blacklist_1752652361",
       "filter_type": {
         "Blacklist": {
           "patterns": [
@@ -131,37 +161,7 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "🤖 Excessive repetition detected. Please use normal text.",
-      "created_at": "2025-07-16T05:53:25.674603220Z",
-      "effectiveness_stats": null,
-      "usage_context": [
-        "general"
-      ]
-    },
-    {
-      "name": "ai_caps_detection",
-      "filter_type": {
-        "ExcessiveCaps": {
-          "max_percentage": 60
-        }
-      },
-      "enabled": true,
-      "escalation": {
-        "first_offense": {
-          "WarnUser": {
-            "message": "AI detected excessive caps. Please use normal text formatting."
-          }
-        },
-        "repeat_offense": {
-          "TimeoutUser": {
-            "duration_seconds": 0
-          }
-        },
-        "offense_window_seconds": 3600
-      },
-      "exemption_level": "Subscriber",
-      "silent_mode": false,
-      "custom_message": "AI detected excessive caps. Please use normal text formatting.",
-      "created_at": "2025-07-16T05:53:25.674605184Z",
+      "created_at": "2025-07-16T07:52:41.118921564Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -191,7 +191,7 @@
       "exemption_level": "Regular",
       "silent_mode": true,
       "custom_message": "Please reduce symbol usage for better readability.",
-      "created_at": "2025-07-16T05:53:25.674607979Z",
+      "created_at": "2025-07-16T07:52:41.118924539Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -201,9 +201,9 @@
   "metadata": {
     "total_filters": 4,
     "filter_types": {
-      "RateLimit ": 1,
       "ExcessiveCaps ": 1,
       "Blacklist ": 1,
+      "RateLimit ": 1,
       "SymbolSpam ": 1
     },
     "estimated_accuracy": 0.9,

@@ -341,6 +341,71 @@ async fn main() -> Result<()> {
     bot.add_command("reloadfilters".to_string(), "Reloading filters from configuration file...".to_string(), true, 60).await; // Mod only
     bot.add_command("filterlist".to_string(), "Filter categories: crypto, social, impersonation, urls, repetition. Use !filterinfo <name> for details.".to_string(), true, 30).await;
 
+    // Giveaway commands
+    bot.add_command(
+        "gstart".to_string(),
+        "Start giveaway: !gstart <active|keyword|number> [options] (mod only)".to_string(),
+        true, // mod only
+        30
+    ).await;
+
+    bot.add_command(
+        "gend".to_string(),
+        "End current giveaway and select winner (mod only)".to_string(),
+        true, // mod only
+        10
+    ).await;
+
+    bot.add_command(
+        "gcancel".to_string(),
+        "Cancel current giveaway (mod only)".to_string(),
+        true, // mod only
+        10
+    ).await;
+
+    bot.add_command(
+        "gstatus".to_string(),
+        "Show current giveaway status and participant count".to_string(),
+        false, // anyone can check
+        30
+    ).await;
+
+    bot.add_command(
+        "geligible".to_string(),
+        "Toggle user eligibility: !geligible [username] (mod only)".to_string(),
+        true, // mod only
+        5
+    ).await;
+
+    bot.add_command(
+        "greset".to_string(),
+        "Reset all user eligibility for current giveaway (mod only)".to_string(),
+        true, // mod only
+        60
+    ).await;
+
+    bot.add_command(
+        "gstats".to_string(),
+        "Show giveaway system statistics (mod only)".to_string(),
+        true, // mod only
+        30
+    ).await;
+
+    bot.add_command(
+        "ghistory".to_string(),
+        "Show recent giveaway history (mod only)".to_string(),
+        true, // mod only
+        60
+    ).await;
+
+    // User-facing informational commands
+    bot.add_command(
+        "giveawayhelp".to_string(),
+        "Learn about giveaways: Types include Active User (chat to enter), Keyword (type word), Random Number (first to type wins)".to_string(),
+        false,
+        60
+    ).await;    
+
     info!("AI-enhanced commands registered");
 
     // =================================================================
