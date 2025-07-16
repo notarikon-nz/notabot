@@ -1,9 +1,6 @@
 use anyhow::Result;
-use log::{error, info, warn};
-use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
-use crate::types::{ChatMessage, SpamFilterType, ExemptionLevel, ModerationEscalation, ModerationAction, GiveawayType};
+use crate::types::{ChatMessage, GiveawayType};
 
 use super::giveaways::{GiveawaySystem};
 

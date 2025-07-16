@@ -1,0 +1,165 @@
+version: '2.0'
+description: NotaBot Enhanced Filter Configuration with Hot-Reload Support
+last_updated: 2025-07-16T22:19:23.220674979Z
+metadata:
+  created_by: NotaBot System
+  created_at: 2025-07-16T22:19:23.220675701Z
+  last_modified_by: System
+  version_history: []
+  checksum: null
+blacklist_filters:
+- id: crypto_spam
+  name: Cryptocurrency Spam Detection
+  enabled: true
+  description: Detects crypto scams and investment spam
+  category: financial_spam
+  priority: 9
+  patterns:
+  - pattern_type: wildcard
+    value: '*free money*'
+    weight: 1.0
+    description: Free money promises
+    enabled: true
+  - pattern_type: regex
+    value: (?i)(guaranteed|100%)\s*(profit|return|roi)
+    weight: 1.0
+    description: Guaranteed profit claims
+    enabled: true
+  - pattern_type: fuzzy
+    value: cryptocurrency investment
+    weight: 0.8
+    description: Crypto investment variations
+    enabled: true
+  case_sensitive: false
+  whole_words_only: false
+  regex_flags: i
+  timeout_seconds: 1800
+  escalation_enabled: true
+  custom_message: 🚨 Crypto spam detected. Appeal with !appeal if this was a mistake.
+  silent_mode: false
+  exemption_level: Regular
+  exempt_users: []
+  exempt_platforms: []
+  active_hours: null
+  active_days: null
+  min_account_age_days: null
+  min_follow_time_days: null
+  track_effectiveness: true
+  auto_disable_threshold: 0.6
+  tags:
+  - crypto
+  - financial
+  - spam
+  ai_enabled: true
+  confidence_threshold: 0.8
+  learning_enabled: true
+- id: social_manipulation
+  name: Social Media Manipulation
+  enabled: true
+  description: Detects follow-for-follow and engagement manipulation
+  category: social_spam
+  priority: 8
+  patterns:
+  - pattern_type: wildcard
+    value: '*follow for follow*'
+    weight: 1.0
+    description: Follow-for-follow requests
+    enabled: true
+  - pattern_type: regex
+    value: (?i)(follow|sub)\s*(for|4)\s*(follow|sub)
+    weight: 1.0
+    description: F4F and S4S patterns
+    enabled: true
+  case_sensitive: false
+  whole_words_only: false
+  regex_flags: i
+  timeout_seconds: 600
+  escalation_enabled: true
+  custom_message: Please engage naturally with our community.
+  silent_mode: false
+  exemption_level: Subscriber
+  exempt_users: []
+  exempt_platforms: []
+  active_hours: null
+  active_days: null
+  min_account_age_days: 7
+  min_follow_time_days: null
+  track_effectiveness: true
+  auto_disable_threshold: 0.7
+  tags:
+  - social
+  - manipulation
+  ai_enabled: true
+  confidence_threshold: 0.75
+  learning_enabled: true
+spam_filters:
+- id: excessive_caps
+  name: Excessive Capitals
+  enabled: true
+  description: Detects messages with too many capital letters
+  category: text_spam
+  priority: 5
+  filter_type: ExcessiveCaps
+  parameters:
+    max_percentage: 60
+  timeout_seconds: 300
+  escalation:
+    enabled: true
+    first_offense_action: warn
+    repeat_offense_action: timeout
+    offense_window_seconds: 3600
+    max_escalation_level: 3
+    cooling_off_period: 86400
+  custom_message: Please reduce the use of capital letters.
+  silent_mode: false
+  exemption_level: Subscriber
+  exempt_users: []
+  active_conditions:
+    time_ranges: []
+    day_of_week: []
+    platform_specific: {}
+    channel_specific: {}
+    user_count_threshold: null
+    stream_category_filter: []
+  max_checks_per_second: 100
+  cache_results: true
+  track_performance: true
+  ai_enhancement:
+    enabled: true
+    confidence_boost: 0.2
+    pattern_learning: true
+    false_positive_learning: true
+    context_analysis: true
+    user_behavior_analysis: true
+global_settings:
+  max_filters_per_message: 10
+  global_timeout_multiplier: 1.0
+  enable_cross_platform_sync: true
+  enable_community_learning: true
+  auto_optimization: false
+  performance_monitoring: true
+  debug_mode: false
+categories:
+  social_spam:
+    name: Social Manipulation
+    description: Follow-for-follow and engagement manipulation
+    enabled: true
+    priority: 8
+    color: '#ff8844'
+    icon: 🔄
+  financial_spam:
+    name: Financial Spam
+    description: Cryptocurrency, investment, and money-related spam
+    enabled: true
+    priority: 9
+    color: '#ff4444'
+    icon: 💰
+import_export:
+  auto_export_enabled: true
+  export_interval_hours: 24
+  export_formats:
+  - json
+  - yaml
+  community_sharing: false
+  backup_retention_days: 30
+  nightbot_compatibility: true

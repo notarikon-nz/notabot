@@ -1,0 +1,192 @@
+# config/timers.yaml - Enhanced Timer Configuration
+version: "2.0"
+description: "NotaBot Enhanced Timer Configuration with Advanced Scheduling"
+last_updated: "2025-01-17T12:00:00Z"
+
+global_settings:
+  max_timers_per_channel: 10
+  global_cooldown_seconds: 120
+  respect_rate_limits: true
+  batch_processing: false
+  performance_monitoring: true
+
+variables:
+  custom_variables:
+    discord_invite: "https://discord.gg/yourcommunity"
+    twitter_handle: "@yourcommunity"
+    youtube_channel: "https://youtube.com/@yourchannel"
+  
+  dynamic_variables:
+    - name: "$(uptime)"
+      source: "stream_uptime"
+      format: "human_readable"
+      cache_seconds: 60
+    
+    - name: "$(viewers)"
+      source: "viewer_count"
+      format: "number"
+      cache_seconds: 30
+    
+    - name: "$(last_follower)"
+      source: "latest_follower"
+      format: "username"
+      cache_seconds: 30
+    
+    - name: "$(game)"
+      source: "current_game"
+      format: "string"
+      cache_seconds: 300
+  
+  api_variables: []
+
+analytics:
+  track_effectiveness: true
+  track_click_through: false
+  track_engagement: true
+  retention_days: 30
+
+timers:
+  - id: "ai_features_showcase"
+    name: "AI Features Showcase"
+    enabled: true
+    description: "Showcases the AI moderation capabilities"
+    category: "info"
+    
+    messages:
+      - content: "🤖 This stream is protected by NotaBot's AI moderation! Features: fuzzy matching, leetspeak detection, unicode normalization, and real-time learning!"
+        weight: 1.0
+        conditions: null
+        variables: ["$(platform)"]
+      
+      - content: "✨ Our AI detects spam patterns 10x better than traditional bots. False positives? We learn from mistakes and adapt in real-time!"
+        weight: 1.0
+        conditions:
+          min_viewers: 20
+        variables: ["$(viewers)"]
+      
+      - content: "🧠 Smart escalation system tracks user behavior and applies appropriate penalties. Good users get second chances, bad actors get swift justice!"
+        weight: 0.8
+        conditions: null
+        variables: []
+    
+    message_rotation: "sequential"
+    
+    schedule:
+      interval_seconds: 2700  # 45 minutes
+      random_offset_max: 300  # ±5 minutes
+      time_windows: []
+      day_restrictions: []
+      cooldown_after_message: 60
+    
+    targeting:
+      platforms: ["twitch", "youtube"]
+      channels: []  # All channels
+      exclude_channels: []
+      user_level_filter: null
+    
+    conditions:
+      min_chat_activity: 5  # 5 messages per minute
+      min_viewer_count: 15
+      max_viewer_count: null
+      stream_uptime_min: 10  # 10 minutes
+      last_timer_cooldown: 600  # 10 minutes since last timer
+    
+    analytics_enabled: true
+    track_engagement: true
+
+  - id: "community_engagement"
+    name: "Community Engagement"
+    enabled: true
+    description: "Promotes community engagement and interaction"
+    category: "community"
+    
+    messages:
+      - content: "💬 New here? Say hello! Our AI keeps chat friendly and welcoming. Use !commands to see what I can do!"
+        weight: 1.0
+        conditions:
+          min_viewers: 10
+          max_viewers: 50
+        variables: ["$(platform)"]
+      
+      - content: "🎯 Enjoying the stream? Follow for more content! Our AI learns your preferences and helps create the best experience."
+        weight: 0.9
+        conditions:
+          min_viewers: 25
+        variables: ["$(last_follower)", "$(game)"]
+      
+      - content: "🌟 Want to join our community? Discord: $(discord) | Twitter: $(twitter) | YouTube: $(youtube_channel)"
+        weight: 0.7
+        conditions:
+          min_viewers: 40
+        variables: ["$(discord)", "$(twitter)", "$(youtube_channel)"]
+    
+    message_rotation: "weighted"
+    
+    schedule:
+      interval_seconds: 3600  # 60 minutes
+      random_offset_max: 600  # ±10 minutes
+      time_windows:
+        - start: "12:00"
+          end: "23:00"
+          timezone: "UTC"
+      day_restrictions: []
+      cooldown_after_message: 120
+    
+    targeting:
+      platforms: ["twitch"]
+      channels: []
+      exclude_channels: ["test_channel"]
+      user_level_filter: null
+    
+    conditions:
+      min_chat_activity: 3
+      min_viewer_count: 8
+      max_viewer_count: 200
+      stream_uptime_min: 20
+      last_timer_cooldown: 900  # 15 minutes
+    
+    analytics_enabled: true
+    track_engagement: true
+
+  - id: "moderation_info"
+    name: "Moderation Information"
+    enabled: true
+    description: "Informs users about moderation policies and appeal process"
+    category: "moderation"
+    
+    messages:
+      - content: "🛡️ Moderation powered by AI! False positive? Use !appeal <reason> and our AI will learn from the mistake."
+        weight: 1.0
+        conditions: null
+        variables: []
+      
+      - content: "📋 Chat Rules: Be respectful, no spam, no self-promotion without permission. Our AI helps enforce these fairly!"
+        weight: 0.8
+        conditions:
+          min_viewers: 30
+        variables: ["$(uptime)"]
+    
+    message_rotation: "random"
+    
+    schedule:
+      interval_seconds: 5400  # 90 minutes
+      random_offset_max: 900  # ±15 minutes
+      time_windows: []
+      day_restrictions: []
+      cooldown_after_message: 180
+    
+    targeting:
+      platforms: ["twitch", "youtube"]
+      channels: []
+      exclude_channels: []
+      user_level_filter: null
+    
+    conditions:
+      min_chat_activity: 2
+      min_viewer_count: 5
+      max_viewer_count: null
+      stream_uptime_min: 30
+      last_timer_cooldown: 1200  # 20 minutes
+    
+    analytics_enabled: true
+    track_engagement: false

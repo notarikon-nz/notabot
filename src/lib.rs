@@ -48,6 +48,7 @@
 pub mod types;
 pub mod platforms;
 pub mod bot;
+pub mod config;
 
 #[cfg(feature = "web")]
 pub mod web;

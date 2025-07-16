@@ -1,0 +1,75 @@
+# config/bot.yaml - Core Bot Configuration
+version: "2.0"
+description: "NotaBot Core Configuration with Platform Integration"
+last_updated: "2025-01-17T12:00:00Z"
+
+core:
+  bot_name: "NotaBot"
+  global_prefix: "!"
+  response_delay_ms: 150
+  max_message_length: 500
+  rate_limit_per_minute: 20
+  debug_mode: false
+  log_level: "info"
+
+platforms:
+  twitch:
+    enabled: true
+    connection_settings:
+      oauth_token: "${TWITCH_OAUTH_TOKEN}"
+      username: "${TWITCH_USERNAME}"
+      channels: "${TWITCH_CHANNELS}"
+    rate_limits:
+      messages_per_second: 0.5
+      burst_limit: 5
+      cooldown_seconds: 30
+    features:
+      moderation: true
+      timers: true
+      commands: true
+      points: true
+      giveaways: true
+    webhooks: []
+  
+  youtube:
+    enabled: false  # Disabled by default
+    connection_settings:
+      api_key: "${YOUTUBE_API_KEY}"
+      oauth_token: "${YOUTUBE_OAUTH_TOKEN}"
+      live_chat_id: "${YOUTUBE_LIVE_CHAT_ID}"
+    rate_limits:
+      messages_per_second: 0.3
+      burst_limit: 3
+      cooldown_seconds: 60
+    features:
+      moderation: true
+      timers: true
+      commands: true
+      points: false  # Limited on YouTube
+      giveaways: true
+    webhooks: []
+
+features:
+  ai_moderation: true
+  advanced_patterns: true
+  smart_escalation: true
+  real_time_analytics: true
+  community_features: false  # Disabled by default
+  auto_optimization: false   # Disabled by default for safety
+  learning_mode: true
+  beta_features: false
+
+performance:
+  max_memory_mb: 256
+  max_cpu_percent: 80
+  cache_size_mb: 64
+  worker_threads: 4
+  batch_size: 100
+  monitoring_enabled: true
+
+security:
+  encryption_enabled: true
+  api_key_rotation_days: 90
+  max_failed_attempts: 5
+  ip_whitelist: []
+  audit_logging: true

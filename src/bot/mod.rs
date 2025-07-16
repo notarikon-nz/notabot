@@ -11,6 +11,7 @@ pub mod achievements;
 pub mod achievement_commands;
 pub mod analytics;
 pub mod commands;
+pub mod config_integration;
 pub mod enhanced_moderation;
 pub mod filter_commands;
 pub mod filter_import_export;
@@ -36,9 +37,8 @@ use achievements::AchievementSystem;
 use achievement_commands::AchievementCommands;
 use filter_commands::FilterCommands;
 use enhanced_moderation::EnhancedModerationSystem;
-use crate::types::{GiveawayType, GiveawaySettings, GiveawayResult, UserLevel, GiveawayWinner, CompletedGiveaway};
+use crate::types::{GiveawayType, GiveawaySettings, GiveawayResult};
 use giveaways::{GiveawaySystem};
-use giveaway_commands::GiveawayCommands;
 
 /// Core bot engine that manages connections and all bot systems
 pub struct ChatBot {
@@ -84,6 +84,10 @@ impl ChatBot {
         }
     }
 
+    pub fn get_moderation_system(&self) -> Arc<ModerationSystem> {
+        self.moderation_system.clone()
+    }
+     
     pub fn create_enhanced_moderation(&self) -> EnhancedModerationSystem {
         EnhancedModerationSystem::new(self.moderation_system.clone())
     }

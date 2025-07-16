@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
-use log::{info, warn, error, debug};
+use log::{info, warn, debug};
 use rand::{thread_rng, Rng};
 use uuid::Uuid;
 
@@ -274,7 +274,7 @@ impl GiveawaySystem {
                 }
             }
 
-            GiveawayType::RandomNumber { min, max, .. } => {
+            GiveawayType::RandomNumber {   .. } => {
                 // Check if user typed the generated number
                 if let Some(generated) = giveaway.generated_number {
                     if let Ok(typed_number) = message.content.trim().parse::<u32>() {

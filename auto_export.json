@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exported_at": "2025-07-16T07:52:41.118924980Z",
+  "exported_at": "2025-07-16T21:55:08.354644485Z",
   "exported_by": "NotaBot AI System",
   "bot_version": "2.0.0",
   "description": "AI-optimized filter pack with real-time effectiveness metrics",
@@ -10,6 +10,36 @@
     "optimized"
   ],
   "filters": [
+    {
+      "name": "ai_symbol_spam",
+      "filter_type": {
+        "SymbolSpam": {
+          "max_percentage": 50
+        }
+      },
+      "enabled": true,
+      "escalation": {
+        "first_offense": {
+          "WarnUser": {
+            "message": "Please reduce symbol usage for better readability."
+          }
+        },
+        "repeat_offense": {
+          "TimeoutUser": {
+            "duration_seconds": 0
+          }
+        },
+        "offense_window_seconds": 3600
+      },
+      "exemption_level": "Regular",
+      "silent_mode": true,
+      "custom_message": "Please reduce symbol usage for better readability.",
+      "created_at": "2025-07-16T21:55:08.354609379Z",
+      "effectiveness_stats": null,
+      "usage_context": [
+        "general"
+      ]
+    },
     {
       "name": "ai_caps_detection",
       "filter_type": {
@@ -34,45 +64,14 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "AI detected excessive caps. Please use normal text formatting.",
-      "created_at": "2025-07-16T07:52:41.118890957Z",
+      "created_at": "2025-07-16T21:55:08.354614118Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
       ]
     },
     {
-      "name": "ai_rate_limiting",
-      "filter_type": {
-        "RateLimit": {
-          "max_messages": 4,
-          "window_seconds": 15
-        }
-      },
-      "enabled": true,
-      "escalation": {
-        "first_offense": {
-          "WarnUser": {
-            "message": "Please slow down your messages to maintain chat quality."
-          }
-        },
-        "repeat_offense": {
-          "TimeoutUser": {
-            "duration_seconds": 0
-          }
-        },
-        "offense_window_seconds": 3600
-      },
-      "exemption_level": "Subscriber",
-      "silent_mode": false,
-      "custom_message": "Please slow down your messages to maintain chat quality.",
-      "created_at": "2025-07-16T07:52:41.118895666Z",
-      "effectiveness_stats": null,
-      "usage_context": [
-        "general"
-      ]
-    },
-    {
-      "name": "blacklist_1752652361",
+      "name": "blacklist_1752702908",
       "filter_type": {
         "Blacklist": {
           "patterns": [
@@ -161,24 +160,25 @@
       "exemption_level": "Subscriber",
       "silent_mode": false,
       "custom_message": "🤖 Excessive repetition detected. Please use normal text.",
-      "created_at": "2025-07-16T07:52:41.118921564Z",
+      "created_at": "2025-07-16T21:55:08.354640086Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
       ]
     },
     {
-      "name": "ai_symbol_spam",
+      "name": "ai_rate_limiting",
       "filter_type": {
-        "SymbolSpam": {
-          "max_percentage": 50
+        "RateLimit": {
+          "max_messages": 4,
+          "window_seconds": 15
         }
       },
       "enabled": true,
       "escalation": {
         "first_offense": {
           "WarnUser": {
-            "message": "Please reduce symbol usage for better readability."
+            "message": "Please slow down your messages to maintain chat quality."
           }
         },
         "repeat_offense": {
@@ -188,10 +188,10 @@
         },
         "offense_window_seconds": 3600
       },
-      "exemption_level": "Regular",
-      "silent_mode": true,
-      "custom_message": "Please reduce symbol usage for better readability.",
-      "created_at": "2025-07-16T07:52:41.118924539Z",
+      "exemption_level": "Subscriber",
+      "silent_mode": false,
+      "custom_message": "Please slow down your messages to maintain chat quality.",
+      "created_at": "2025-07-16T21:55:08.354643984Z",
       "effectiveness_stats": null,
       "usage_context": [
         "general"
@@ -201,10 +201,10 @@
   "metadata": {
     "total_filters": 4,
     "filter_types": {
-      "ExcessiveCaps ": 1,
-      "Blacklist ": 1,
+      "SymbolSpam ": 1,
       "RateLimit ": 1,
-      "SymbolSpam ": 1
+      "Blacklist ": 1,
+      "ExcessiveCaps ": 1
     },
     "estimated_accuracy": 0.9,
     "recommended_for": [

@@ -13,7 +13,8 @@ pub struct CommandSystem {
 }
 
 impl CommandSystem {
-    pub fn new() -> Self {
+    pub fn new(
+    ) -> Self {
         Self {
             commands: Arc::new(RwLock::new(HashMap::new())),
             command_cooldowns: Arc::new(RwLock::new(HashMap::new())),

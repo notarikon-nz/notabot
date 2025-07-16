@@ -1,10 +1,8 @@
 use anyhow::Result;
 use log::{warn, info};
 use std::sync::Arc;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
 
-use crate::types::{ChatMessage, BotTimer};
+use crate::types::ChatMessage;
 use super::timers::TimerSystem;
 
 pub struct TimerCommands {

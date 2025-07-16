@@ -1,14 +1,53 @@
+/*
+https://chat.deepseek.com/a/chat/s/0c19e9d8-aad4-4681-b35c-4070b33f952e
+
+    ONE AT A TIME
+
+1. Extract all configuration to external files
+
+[x] Move all patterns and filters to external YAML/JSON files
+[x] Use serde for deserialization with caching
+[x] Implement hot-reloading for configuration files
+
+2. Pattern Matching Optimization
+
+    Batch pattern additions
+    Use pattern pre-compilation
+    Implement pattern grouping
+
+3. Resource Management
+
+    Use Arc for shared resources
+    Implement connection pooling
+    Add graceful shutdown
+
+4. Performance Monitoring
+
+    Add metrics collection
+    Implement adaptive performance tuning
+
+5. Command Registration Optimization
+
+    Batch command registration
+    Use a command manifest file
+
+6. Smart Escalation Optimization
+
+    Make parameters configurable
+    Add dynamic adjustment based on chat load
+
+*/
+
 use anyhow::Result;
 use log::{debug, error, info, warn};
 use tokio::time::{sleep, Duration};
 use std::env;
 use std::path::Path;
+use std::sync::Arc;
 
 use notabot::prelude::*;
-use notabot::types::{ExemptionLevel, FilterConfigManager};
-use notabot::bot::pattern_matching::AdvancedPattern;
-use notabot::bot::filter_import_export::{ExportFormat, ExportOptions, ImportOptions};
-use notabot::bot::smart_escalation::SmartEscalation;
+use notabot::config::ConfigurationManager;
+use notabot::bot::config_integration::{ConfigIntegration, ConfigCommands};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -18,464 +57,248 @@ async fn main() -> Result<()> {
         .filter_level(log::LevelFilter::Info)
         .init();
 
-    info!("Starting NotaBot v{} - AI-Powered Moderation System!", env!("CARGO_PKG_VERSION"));
+    info!("Starting NotaBot v{} - AI-Powered Moderation System with Hot-Reload Config!", env!("CARGO_PKG_VERSION"));
 
+    // =================================================================
+    // CONFIGURATION SYSTEM INITIALIZATION
+    // =================================================================
+    
+    info!("Initializing configuration management system...");
+    
+    // Create configuration manager with hot-reload support
+    let config_dir = Path::new("config");
+    let config_manager = Arc::new(ConfigurationManager::new(config_dir));
+    
+    // Initialize configuration system (creates default files if needed)
+    if let Err(e) = config_manager.initialize().await {
+        error!("Failed to initialize configuration system: {}", e);
+        return Err(e);
+    }
+    
+    info!("Configuration system initialized with hot-reload support");
+
+    // =================================================================
+    // BOT CORE INITIALIZATION
+    // =================================================================
+    
     // Create enhanced bot instance
     let mut bot = ChatBot::new();
 
-    // Add platform connections
-    if let Ok(twitch_config) = TwitchConfig::from_env() {
-        let twitch_connection = TwitchConnection::new(twitch_config);
-        bot.add_connection(Box::new(twitch_connection)).await;
-        info!("Twitch connection configured with AI moderation");
-    } else {
-        warn!("Twitch configuration not found - add TWITCH_USERNAME, TWITCH_OAUTH_TOKEN, TWITCH_CHANNELS");
+    // Load bot configuration and setup platforms
+    let bot_config = config_manager.get_bot_config().await;
+    
+    // Add platform connections based on configuration
+    if let Some(twitch_config) = bot_config.platforms.get("twitch") {
+        if twitch_config.enabled {
+            if let Ok(twitch_connection_config) = TwitchConfig::from_env() {
+                let twitch_connection = TwitchConnection::new(twitch_connection_config);
+                bot.add_connection(Box::new(twitch_connection)).await;
+                info!("Twitch connection configured");
+            } else {
+                warn!("Twitch enabled in config but environment variables missing");
+            }
+        }
     }
 
-    if let Ok(youtube_config) = YouTubeConfig::from_env() {
-        let youtube_connection = YouTubeConnection::new(youtube_config);
-        bot.add_connection(Box::new(youtube_connection)).await;
-        info!("YouTube Live Chat configured with cross-platform AI");
-    } else {
-        info!("YouTube config not found - add YOUTUBE_API_KEY, YOUTUBE_OAUTH_TOKEN, YOUTUBE_LIVE_CHAT_ID");
+    if let Some(youtube_config) = bot_config.platforms.get("youtube") {
+        if youtube_config.enabled {
+            if let Ok(youtube_connection_config) = YouTubeConfig::from_env() {
+                let youtube_connection = YouTubeConnection::new(youtube_connection_config);
+                bot.add_connection(Box::new(youtube_connection)).await;
+                info!("YouTube connection configured");
+            } else {
+                warn!("YouTube enabled in config but environment variables missing");
+            }
+        }
     }
 
     // =================================================================
-    // PHASE 2: AI-POWERED MODERATION SYSTEM
+    // ENHANCED MODERATION WITH CONFIGURATION INTEGRATION
     // =================================================================
     
-    info!("Initializing AI-powered moderation system...");
+    info!("Setting up AI-powered moderation with configuration integration...");
     
     // Create enhanced moderation system
     let enhanced_moderation = bot.create_enhanced_moderation();
-
-    // Enable all Phase 2 features
-    enhanced_moderation.set_enhanced_features_enabled(true).await;
-    enhanced_moderation.set_learning_mode(true).await; // AI learns from feedback
     
-    // Setup advanced AI patterns
-    info!("Loading advanced AI detection patterns...");
-    enhanced_moderation.setup_default_advanced_patterns().await?;
+    // Wrap in Arc before using
+    let enhanced_moderation = Arc::new(enhanced_moderation);
+
+    // Setup configuration integration
+    let mut config_integration = ConfigIntegration::new(
+        config_manager.clone(),
+        bot.get_moderation_system(),
+    );
+    config_integration.set_enhanced_moderation(enhanced_moderation.clone());
     
-    // Add custom advanced patterns for superior detection
-    let custom_patterns = vec![
-        // Fuzzy matching for evolved spam
-        AdvancedPattern::FuzzyMatch {
-            pattern: "cryptocurrency".to_string(),
-            threshold: 0.7,
-        },
-        AdvancedPattern::FuzzyMatch {
-            pattern: "investment".to_string(),
-            threshold: 0.8,
-        },
-        AdvancedPattern::FuzzyMatch {
-            pattern: "promotion".to_string(),
-            threshold: 0.75,
-        },
-        
-        // Leetspeak detection for common evasions
-        AdvancedPattern::Leetspeak("bitcoin".to_string()),
-        AdvancedPattern::Leetspeak("crypto".to_string()),
-        AdvancedPattern::Leetspeak("discord".to_string()),
-        AdvancedPattern::Leetspeak("follow4follow".to_string()),
-        AdvancedPattern::Leetspeak("viewbot".to_string()),
-        
-        // Unicode normalization for international spam
-        AdvancedPattern::UnicodeNormalized("free".to_string()),
-        AdvancedPattern::UnicodeNormalized("gift".to_string()),
-        AdvancedPattern::UnicodeNormalized("winner".to_string()),
-        AdvancedPattern::UnicodeNormalized("congratulations".to_string()),
-        
-        // Homoglyph detection for impersonation attempts
-        AdvancedPattern::Homoglyph("moderator".to_string()),
-        AdvancedPattern::Homoglyph("official".to_string()),
-        AdvancedPattern::Homoglyph("support".to_string()),
-        AdvancedPattern::Homoglyph("admin".to_string()),
-        AdvancedPattern::Homoglyph("staff".to_string()),
-        
-        // Repeated character compression for enthusiasm spam
-        AdvancedPattern::RepeatedCharCompression("awesome".to_string()),
-        AdvancedPattern::RepeatedCharCompression("amazing".to_string()),
-        AdvancedPattern::RepeatedCharCompression("please".to_string()),
-        AdvancedPattern::RepeatedCharCompression("help".to_string()),
-        
-        // Zalgo text detection (always important)
-        AdvancedPattern::ZalgoText,
-        
-        // Encoded content detection
-        AdvancedPattern::EncodedContent("spam".to_string()),
-        AdvancedPattern::EncodedContent("scam".to_string()),
-    ];
-
-    for pattern in custom_patterns {
-        enhanced_moderation.add_advanced_pattern(pattern).await?;
+    // Initialize configuration integration (loads and applies all configs)
+    if let Err(e) = config_integration.initialize().await {
+        error!("Failed to initialize configuration integration: {}", e);
+        return Err(e);
     }
-
-    info!("Loaded {} AI detection patterns", 25);
-
-    // =================================================================
-    // ENHANCED SPAM PROTECTION WITH AI
-    // =================================================================
     
-    info!("Configuring AI-enhanced spam protection...");
-
-    // Create filter configuration manager
-    let mut filter_config = FilterConfigManager::new("filters.yaml"); // or filters.json
+    let config_integration = Arc::new(config_integration);
     
-    // Load configuration from file
-    if let Err(e) = filter_config.load_config().await {
-        warn!("Failed to load filter config, using defaults: {}", e);
+    info!("Configuration integration initialized - all filters and patterns loaded from files");
+
+    // Enable enhanced features based on configuration
+    if bot_config.features.ai_moderation {
+        enhanced_moderation.set_enhanced_features_enabled(true).await;
+        info!("AI moderation enabled");
     }
 
-    // Start file watcher in background
-    let mut filter_config_watcher = filter_config.clone(); // You'll need to derive Clone
-    tokio::spawn(async move {
-        if let Err(e) = filter_config_watcher.watch_for_changes().await {
-            error!("Filter config watcher failed: {}", e);
-        }
-    });
-
-    // Apply filters from configuration instead of hardcoded values
-    for blacklist_config in filter_config.get_config().blacklist_filters.iter() {
-        if blacklist_config.enabled {
-            let exemption_level = match blacklist_config.exemption_level.as_str() {
-                "None" => ExemptionLevel::None,
-                "Subscriber" => ExemptionLevel::Subscriber,
-                "Regular" => ExemptionLevel::Regular,
-                "Moderator" => ExemptionLevel::Moderator,
-                "Owner" => ExemptionLevel::Owner,
-                _ => ExemptionLevel::Regular,
-            };
-
-            bot.add_blacklist_filter(
-                blacklist_config.patterns.clone(),
-                blacklist_config.timeout_seconds,
-                Some(exemption_level),
-                blacklist_config.case_sensitive,
-                blacklist_config.whole_words_only,
-                blacklist_config.custom_message.clone(),
-            ).await?;
-
-            info!("Loaded blacklist filter '{}' with {} patterns", 
-                  blacklist_config.name, blacklist_config.patterns.len());
-        } else {
-            info!("Skipped disabled filter '{}'", blacklist_config.name);
-        }
+    if bot_config.features.learning_mode {
+        enhanced_moderation.set_learning_mode(true).await;
+        info!("Learning mode enabled");
     }
 
-    // Apply spam filters from configuration
-    for spam_config in filter_config.get_config().spam_filters.iter() {
-        if spam_config.enabled {
-            // Parse spam filter type and parameters
-            // Implementation depends on your spam filter system
-            info!("Loaded spam filter '{}'", spam_config.name);
-        }
-    }
-
-    // Apply advanced patterns from configuration
-    for pattern_config in filter_config.get_config().advanced_patterns.iter() {
-        if pattern_config.enabled {
-            // Parse and add advanced patterns
-            // Implementation depends on your pattern matching system
-            info!("Loaded advanced pattern '{}'", pattern_config.name);
-        }
-    }
-
-    info!("Loaded {} blacklist filters, {} spam filters, {} advanced patterns from external config",
-          filter_config.get_config().blacklist_filters.len(),
-          filter_config.get_config().spam_filters.len(),
-          filter_config.get_config().advanced_patterns.len());
-
-    // AI-powered escalation system
-    let smart_escalation = SmartEscalation {
-        history_weight: 0.4, // Higher weight for user history
-        community_reports_enabled: true,
-        forgiveness_period: chrono::Duration::days(14), // Forgive after 2 weeks
-        context_sensitive: true,
-        rehabilitation_enabled: true,
-        smart_threshold: 2, // Smart escalation after 2 violations
-        ..Default::default()
-    };
-
-    // Advanced filters with AI enhancement
-    bot.add_spam_filter_enhanced(
-        "ai_caps_detection".to_string(),
-        SpamFilterType::ExcessiveCaps { max_percentage: 60 }, // More lenient with AI context
-        0, // Smart escalation handles timeout
-        ExemptionLevel::Subscriber,
-        Some("AI detected excessive caps. Please use normal text formatting.".to_string()),
-        false,
-    ).await?;
-
-    bot.add_spam_filter_enhanced(
-        "ai_symbol_spam".to_string(),
-        SpamFilterType::SymbolSpam { max_percentage: 50 },
-        0, // Smart escalation
-        ExemptionLevel::Regular,
-        Some("Please reduce symbol usage for better readability.".to_string()),
-        true, // Silent mode to reduce bot chatter
-    ).await?;
-
-    bot.add_spam_filter_enhanced(
-        "ai_rate_limiting".to_string(),
-        SpamFilterType::RateLimit { max_messages: 4, window_seconds: 15 }, // Stricter with AI backup
-        0,
-        ExemptionLevel::Subscriber,
-        Some("Please slow down your messages to maintain chat quality.".to_string()),
-        false,
-    ).await?;
-
-    info!("AI-enhanced spam protection configured with smart escalation");
-
-    // =================================================================
-    // IMPORT EXISTING CONFIGURATIONS
-    // =================================================================
-    
-    // Try to import existing NightBot configuration if available
-    let nightbot_import_path = Path::new("nightbot_import.json");
-    if nightbot_import_path.exists() {
-        info!("Found NightBot import file, upgrading to AI...");
-        
-        match enhanced_moderation.import_filters(
-            nightbot_import_path,
-            Some(ExportFormat::NightBotCompatible),
-            ImportOptions {
-                overwrite_existing: false,
-                prefix_names: true,
-                validate_patterns: true,
-                dry_run: false,
-            }
-        ).await {
-            Ok(result) => {
-                info!("Successfully imported {} filters from NightBot", result.imported_count);
-                if result.warning_count > 0 {
-                    warn!("{} warnings during import: {:?}", result.warning_count, result.warnings);
-                }
-                if result.error_count > 0 {
-                    error!("{} errors during import: {:?}", result.error_count, result.errors);
-                }
-            }
-            Err(e) => {
-                warn!("Failed to import NightBot configuration: {}", e);
-            }
-        }
-    }
-
-    // Load community filter pack if available
-    let community_filters_path = Path::new("community_filters.json");
-    if community_filters_path.exists() {
-        info!("Loading community filter pack...");
-        
-        if let Err(e) = enhanced_moderation.import_filters(
-            community_filters_path,
-            Some(ExportFormat::Json),
-            ImportOptions::default()
-        ).await {
-            warn!("Failed to load community filters: {}", e);
-        } else {
-            info!("Community filter pack loaded successfully");
-        }
+    if bot_config.features.auto_optimization {
+        enhanced_moderation.set_auto_optimization_enabled(true).await;
+        info!("Auto-optimization enabled");
     }
 
     // =================================================================
-    // COMMANDS WITH AI INTEGRATION
+    // CONFIGURATION-BASED COMMANDS
     // =================================================================
     
-    info!("Registering AI-enhanced commands...");
-
+    info!("Registering configuration-aware commands...");
+    
+    // Create configuration commands handler
+    let config_commands = Arc::new(ConfigCommands::new(config_integration.clone()));
+    
     // Basic commands
-    bot.add_command("hello".to_string(), "Hello $(user)! Welcome to our AI-moderated stream on $(platform)!".to_string(), false, 5).await;
-    bot.add_command("uptime".to_string(), "AI moderation system running smoothly on $(platform)! ".to_string(), false, 30).await;
+    bot.add_command("hello".to_string(), "Hello $(user)! Welcome to our AI-moderated stream!".to_string(), false, 5).await;
+    bot.add_command("uptime".to_string(), "AI moderation system running smoothly!".to_string(), false, 30).await;
     
     // AI and moderation commands
     bot.add_command("ai".to_string(), 
-        "This stream uses NotaBot's AI-powered moderation system! 10x smarter than NightBot with real-time learning".to_string(), 
+        "This stream uses NotaBot's next-gen AI moderation! Real-time learning, hot-reload configs, high uptime!".to_string(), 
         false, 30).await;
     
-    bot.add_command("modstats".to_string(), 
-        "AI Moderation Stats: Use !filterstats for details (mod only)".to_string(), 
-        false, 60).await;
+    // Configuration management commands (moderator only)
+    bot.add_command("reloadconfig".to_string(), 
+        "Reloading configuration... (Use: !reloadconfig [filters|patterns|timers|all])".to_string(), 
+        true, 60).await;
     
-    bot.add_command("appeal".to_string(), 
-        "To appeal a moderation action, explain why it was incorrect. Our AI learns from feedback! Format: !appeal <reason>".to_string(), 
-        false, 300).await; // 5 minute cooldown
-    
-    bot.add_command("patterns".to_string(), 
-        "AI Detection: Fuzzy matching, leetspeak, Unicode normalization, homoglyphs, Zalgo text + more! (mod only)".to_string(), 
+    bot.add_command("configstatus".to_string(), 
+        "Configuration status and statistics".to_string(), 
         true, 30).await;
+    
+    bot.add_command("validateconfig".to_string(), 
+        "Validating all configuration files".to_string(), 
+        true, 60).await;
+    
+    bot.add_command("exportconfig".to_string(), 
+        "Export configuration (Use: !exportconfig [json|yaml|nightbot])".to_string(), 
+        true, 120).await;
+    
+    bot.add_command("backupconfig".to_string(), 
+        "Create configuration backup".to_string(), 
+        true, 300).await;
     
     // Enhanced filter management commands
     bot.add_command("filters".to_string(), 
-        "AI Filter Management: !filters <enable|disable|add|remove|list> | !blacklist <add|remove|list> | !aiexport".to_string(), 
+        "Filter Management: !filters <list|enable|disable|stats> [filter_id] | Configs auto-reload from files!".to_string(), 
         true, 10).await;
     
-    bot.add_command("aiexport".to_string(), 
-        "Export AI-optimized filters: !aiexport [format] - Available: json, yaml, nightbot".to_string(), 
-        true, 60).await;
-    
-    bot.add_command("aiimport".to_string(), 
-        "Import filters with AI enhancement: !aiimport <file> [format]".to_string(), 
-        true, 60).await;
-    
-    bot.add_command("learning".to_string(), 
-        "AI Learning Mode: !learning <on|off> - Enables/disables AI learning from chat patterns".to_string(), 
+    bot.add_command("patterns".to_string(), 
+        "AI Pattern Status: Fuzzy matching, leetspeak, unicode, homoglyphs, zalgo detection + more! All configurable!".to_string(), 
         true, 30).await;
     
-    bot.add_command("optimize".to_string(), 
-        "Auto-optimize filters based on AI analytics: !optimize".to_string(), 
-        true, 300).await; // 5 minute cooldown
+    bot.add_command("ailearning".to_string(), 
+        "AI Learning: Real-time pattern adaptation, false positive reduction, community feedback integration".to_string(), 
+        true, 30).await;
     
-    // Points and achievement commands
-    bot.add_command("points".to_string(), "AI-tracked points: !points [user] - Earned through positive chat participation".to_string(), false, 5).await;
-    bot.add_command("give".to_string(), "Transfer points: !give <user> <amount> - Builds community reputation".to_string(), false, 60).await;
-    bot.add_command("achievements".to_string(), "AI-powered achievements: !achievements [user] - Unlock through positive behavior".to_string(), false, 10).await;
+    // User-facing commands
+    bot.add_command("appeal".to_string(), 
+        "Appeal a moderation action: !appeal <reason>. Our AI learns from feedback to improve accuracy!".to_string(), 
+        false, 300).await;
+    
+    bot.add_command("modhelp".to_string(), 
+        "Moderation Help: This chat uses AI-powered moderation. Appeals are welcome and help train the system!".to_string(), 
+        false, 60).await;
+    
+    // Points and engagement commands
+    bot.add_command("points".to_string(), "AI-tracked points: !points [user] - Earned through positive participation".to_string(), false, 5).await;
+    bot.add_command("achievements".to_string(), "AI-powered achievements: !achievements [user] - Unlock through good behavior".to_string(), false, 10).await;
     bot.add_command("leaderboard".to_string(), "Community leaders: !leaderboard [number] - Top contributors by AI metrics".to_string(), false, 30).await;
     
-    // Fun AI-themed commands
-    bot.add_command("robot".to_string(), "BEEP BOOP! I am NotaBot, your friendly AI moderator. I learn and adapt to keep chat awesome! ".to_string(), false, 30).await;
-    bot.add_command("skynet".to_string(), "Don't worry, I'm a friendly AI! I just want to make chat better for everyone. No robot uprising here!".to_string(), false, 60).await;
-    bot.add_command("ai_vs_nightbot".to_string(), 
-        "NotaBot vs NightBot: 10x faster, AI-powered, learns from mistakes, real-time analytics, community intelligence! No contest!".to_string(), 
-        false, 120).await;
-
-    bot.add_command("reloadfilters".to_string(), "Reloading filters from configuration file...".to_string(), true, 60).await; // Mod only
-    bot.add_command("filterlist".to_string(), "Filter categories: crypto, social, impersonation, urls, repetition. Use !filterinfo <name> for details.".to_string(), true, 30).await;
-
     // Giveaway commands
-    bot.add_command(
-        "gstart".to_string(),
-        "Start giveaway: !gstart <active|keyword|number> [options] (mod only)".to_string(),
-        true, // mod only
-        30
-    ).await;
-
-    bot.add_command(
-        "gend".to_string(),
-        "End current giveaway and select winner (mod only)".to_string(),
-        true, // mod only
-        10
-    ).await;
-
-    bot.add_command(
-        "gcancel".to_string(),
-        "Cancel current giveaway (mod only)".to_string(),
-        true, // mod only
-        10
-    ).await;
-
-    bot.add_command(
-        "gstatus".to_string(),
-        "Show current giveaway status and participant count".to_string(),
-        false, // anyone can check
-        30
-    ).await;
-
-    bot.add_command(
-        "geligible".to_string(),
-        "Toggle user eligibility: !geligible [username] (mod only)".to_string(),
-        true, // mod only
-        5
-    ).await;
-
-    bot.add_command(
-        "greset".to_string(),
-        "Reset all user eligibility for current giveaway (mod only)".to_string(),
-        true, // mod only
-        60
-    ).await;
-
-    bot.add_command(
-        "gstats".to_string(),
-        "Show giveaway system statistics (mod only)".to_string(),
-        true, // mod only
-        30
-    ).await;
-
-    bot.add_command(
-        "ghistory".to_string(),
-        "Show recent giveaway history (mod only)".to_string(),
-        true, // mod only
-        60
-    ).await;
-
-    // User-facing informational commands
-    bot.add_command(
-        "giveawayhelp".to_string(),
-        "Learn about giveaways: Types include Active User (chat to enter), Keyword (type word), Random Number (first to type wins)".to_string(),
-        false,
-        60
-    ).await;    
-
-    info!("AI-enhanced commands registered");
-
-    // =================================================================
-    // AI-THEMED TIMERS
-    // =================================================================
-
-    info!("Loading AI-themed timers from configuration...");
+    bot.add_command("gstart".to_string(), "Start giveaway: !gstart <active|keyword|number> [options] (mod only)".to_string(), true, 30).await;
+    bot.add_command("gend".to_string(), "End current giveaway and select winner (mod only)".to_string(), true, 10).await;
+    bot.add_command("gstatus".to_string(), "Show current giveaway status and participant count".to_string(), false, 30).await;
     
-    // Set custom variables for timer substitution through the bot's public API
-    if let Ok(discord_url) = env::var("DISCORD_URL") {
-        bot.set_timer_variable("$(discord)".to_string(), discord_url).await?;
-    }
-    if let Ok(twitter_handle) = env::var("TWITTER_HANDLE") {
-        bot.set_timer_variable("$(twitter)".to_string(), twitter_handle).await?;
-    }
-    if let Ok(youtube_channel) = env::var("YOUTUBE_CHANNEL") {
-        bot.set_timer_variable("$(youtube_channel)".to_string(), youtube_channel).await?;
-    }
-
-    info!("Timer system will load configuration from timers.yaml automatically");
-
-    // You can still add additional timers programmatically if needed
-    // These will supplement the ones loaded from the configuration file
-    bot.add_timer("runtime_status".to_string(), 
-        "NotaBot runtime status: $(count) announcements sent, protecting your chat 24/7!".to_string(), 
-        3600).await?; // 60 minutes - runtime status    
-
-    info!("AI-themed timers configured");
+    info!("Commands registered with configuration integration");
 
     // =================================================================
-    // AUTO-EXPORT FOR COMMUNITY SHARING
+    // CONFIGURATION CHANGE MONITORING
     // =================================================================
     
-    // Clone for background task
-    let enhanced_moderation_export = bot.create_enhanced_moderation();
-
-    // Setup automatic filter export for community sharing
+    // Setup configuration change monitoring
+    let config_integration_monitor = config_integration.clone();
+    
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(3600 * 6)); // Every 6 hours
-        loop {
-            interval.tick().await;
-            
-            // Auto-export optimized filters for community sharing
-            let export_options = ExportOptions {
-                exported_by: "NotaBot AI System".to_string(),
-                description: "AI-optimized filter pack with real-time effectiveness metrics".to_string(),
-                tags: vec!["ai".to_string(), "community".to_string(), "optimized".to_string()],
-                author: "NotaBot Community".to_string(),
-                license: "Creative Commons".to_string(),
-                recommended_for: vec!["gaming".to_string(), "general".to_string()],
-                update_url: Some("https://github.com/notarikon-nz/notabot/releases".to_string()),
-            };
-            
-            if let Err(e) = enhanced_moderation_export.export_filters(
-                Path::new("auto_export.json"),
-                ExportFormat::Json,
-                export_options,
-            ).await {
-                debug!("Auto-export failed: {}", e);
-            } else {
-                debug!("Auto-exported AI-optimized filters for community sharing");
+        let mut receiver = config_integration_monitor.get_config_manager().subscribe_to_changes();
+        
+        while let Ok(event) = receiver.recv().await {
+            match event {
+                notabot::config::ConfigChangeEvent::FiltersUpdated { file } => {
+                    info!("Filters updated in {}, automatically applied!", file);
+                }
+                notabot::config::ConfigChangeEvent::PatternsUpdated { file } => {
+                    info!("Patterns updated in {}, AI enhanced!", file);
+                }
+                notabot::config::ConfigChangeEvent::TimersUpdated { file } => {
+                    info!("Timers updated in {}, schedule refreshed!", file);
+                }
+                notabot::config::ConfigChangeEvent::ValidationError { file, error } => {
+                    error!("Configuration error in {}: {}", file, error);
+                }
+                notabot::config::ConfigChangeEvent::ReloadComplete { files_updated } => {
+                    info!("Hot-reload complete for: {:?}", files_updated);
+                }
+                _ => {}
             }
         }
     });
 
     // =================================================================
-    // START ENHANCED BOT SYSTEM
+    // CUSTOM COMMAND HANDLING
     // =================================================================
     
-    // Start web dashboard first
+    // Clone references for the message processing loop
+    let config_commands_handler = config_commands.clone();
+    let enhanced_moderation_handler = enhanced_moderation.clone();
+    
+    // Get the bot's message receiver and response sender
+    let (message_sender, mut message_receiver) = tokio::sync::mpsc::channel(1000);
+    let (response_sender, mut response_receiver) = tokio::sync::mpsc::channel(1000);
+    
+    // Set up message processing task
+    tokio::spawn(async move {
+        while let Some(message) = message_receiver.recv().await {
+            // Handle config commands first
+            if let Some(response) = handle_config_commands(&message, &config_commands_handler, &enhanced_moderation_handler).await {
+                if let Err(e) = response_sender.send((
+                    message.platform.clone(),
+                    message.channel.clone(),
+                    response
+                )).await {
+                    error!("Failed to send config command response: {}", e);
+                }
+                continue; // Skip regular command processing
+            }
+            
+            // Continue with regular command processing through the bot's command system
+            // The bot will handle this through its existing CommandSystem
+        }
+    });
+
+    // =================================================================
+    // WEB DASHBOARD WITH CONFIGURATION MANAGEMENT
+    // =================================================================
+    
+    // Start web dashboard
     let dashboard_port = env::var("DASHBOARD_PORT")
         .unwrap_or_else(|_| "3000".to_string())
         .parse::<u16>()
@@ -485,8 +308,13 @@ async fn main() -> Result<()> {
         warn!("Failed to start web dashboard: {}", e);
     } else {
         info!("AI Analytics Dashboard: http://localhost:{}", dashboard_port);
+        info!("Real-time configuration monitoring available");
     }
 
+    // =================================================================
+    // START BOT CORE SYSTEMS
+    // =================================================================
+    
     // Start core bot systems
     if let Err(e) = bot.start().await {
         error!("Failed to start bot core: {}", e);
@@ -494,19 +322,20 @@ async fn main() -> Result<()> {
     }
 
     info!("NotaBot AI System Started Successfully!");
-    info!("Analytics Dashboard: http://localhost:{}", dashboard_port);
+    info!("Configuration: Hot-reload enabled from ./config/");
+    info!("Dashboard: http://localhost:{}", dashboard_port);
     info!("AI Features: ACTIVE with real-time learning");
-    info!("Spam Protection: ENHANCED with advanced pattern detection");
-    info!("Economy System: ACTIVE with AI-tracked reputation");
-    info!("Achievements: ACTIVE with behavior-based unlocks");
-    info!("Commands: !ai, !filters, !patterns, !appeal, !optimize");
+    info!("Spam Protection: ENHANCED with configurable patterns");
+    info!("Hot-Reload: Edit config files without restarting!");
+    info!("Analytics: Real-time effectiveness monitoring");
 
     // =================================================================
-    // AI MONITORING AND OPTIMIZATION LOOP
+    // CONFIGURATION-AWARE MONITORING LOOP
     // =================================================================
     
     let mut stats_counter = 0;
     let mut optimization_counter = 0;
+    let mut config_validation_counter = 0;
     
     loop {
         sleep(Duration::from_secs(60)).await;
@@ -518,18 +347,29 @@ async fn main() -> Result<()> {
             error!("Unhealthy platforms: {:?}", unhealthy);
         }
         
-        // Periodic AI analytics (every 5 minutes)
+        // Configuration statistics (every 5 minutes)
         stats_counter += 1;
         if stats_counter >= 5 {
             stats_counter = 0;
             
+            // Get configuration statistics
+            let config_stats = config_integration.get_config_stats().await;
+            info!("Config Stats: {} filters ({} enabled), {} patterns ({} enabled), {} timers ({} enabled)",
+                  config_stats.total_blacklist_filters,
+                  config_stats.enabled_blacklist_filters,
+                  config_stats.total_pattern_collections,
+                  config_stats.enabled_pattern_collections,
+                  config_stats.total_timers,
+                  config_stats.enabled_timers
+            );
+            
             // Get AI system status
             let ai_status = enhanced_moderation.get_system_status().await;
             info!("AI Status: Health={:.1}%, Patterns={}, Alerts={}, Learning={}", 
-                  ai_status.system_health_score * 100.0,
-                  ai_status.total_patterns,
-                  ai_status.active_alerts,
-                  if ai_status.learning_mode_enabled { "ON" } else { "OFF" }
+                ai_status.system_health_score * 100.0,
+                ai_status.total_patterns,
+                ai_status.active_alerts,
+                if ai_status.learning_mode_enabled { "ON" } else { "OFF" }
             );
             
             // Get effectiveness report
@@ -540,17 +380,37 @@ async fn main() -> Result<()> {
                       report.performance_metrics.average_response_time
                 );
                 
-                // Log any critical recommendations
+                // Log important recommendations
                 for rec in &report.recommendations {
-                    if matches!(rec.priority, notabot::bot::realtime_analytics::RecommendationPriority::Critical) {
-                        warn!("Critical AI Recommendation: {}", rec.title);
+                    if matches!(rec.priority, notabot::bot::realtime_analytics::RecommendationPriority::High | 
+                                           notabot::bot::realtime_analytics::RecommendationPriority::Critical) {
+                        warn!("AI Recommendation ({:?}): {}", rec.priority, rec.title);
                     }
                 }
             }
+        }
+        
+        // Configuration validation (every 15 minutes)
+        config_validation_counter += 1;
+        if config_validation_counter >= 15 {
+            config_validation_counter = 0;
             
-            // General bot stats
-            if let Ok(stats) = bot.get_bot_stats().await {
-                debug!("Full Bot Stats: {}", serde_json::to_string_pretty(&stats).unwrap_or_default());
+            // Validate configurations
+            match config_integration.validate_configurations().await {
+                Ok(report) => {
+                    if !report.errors.is_empty() {
+                        error!("Configuration validation errors: {:?}", report.errors);
+                    } else {
+                        debug!("All configurations valid");
+                    }
+                    
+                    if !report.warnings.is_empty() {
+                        warn!("Configuration warnings: {:?}", report.warnings);
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to validate configurations: {}", e);
+                }
             }
         }
         
@@ -559,103 +419,234 @@ async fn main() -> Result<()> {
         if optimization_counter >= 30 {
             optimization_counter = 0;
             
-            // Enable auto-optimization after 30 minutes of runtime (safety delay)
-            enhanced_moderation.set_auto_optimization_enabled(true).await;
-            
-            // Run auto-optimization
-            match enhanced_moderation.auto_optimize_filters().await {
-                Ok(result) => {
-                    if result.optimizations_applied > 0 {
-                        info!("AI Auto-Optimization: {} improvements applied, {:.1}% performance gain",
-                              result.optimizations_applied, result.performance_improvement);
+            // Run auto-optimization if enabled
+            if bot_config.features.auto_optimization {
+                match enhanced_moderation.auto_optimize_filters().await {
+                    Ok(result) => {
+                        if result.optimizations_applied > 0 {
+                            info!("AI Auto-Optimization: {} improvements applied, {:.1}% performance gain",
+                                  result.optimizations_applied, result.performance_improvement);
+                        }
                     }
-                }
-                Err(e) => {
-                    debug!("Auto-optimization skipped: {}", e);
+                    Err(e) => {
+                        debug!("Auto-optimization skipped: {}", e);
+                    }
                 }
             }
         }
         
-        // Heartbeat message every 10 minutes
+        // Heartbeat with configuration info (every 10 minutes)
         if stats_counter == 0 && optimization_counter % 10 == 0 {
-            info!("NotaBot AI running strong - The definitive NightBot replacement!");
+            info!("NotaBot AI running strong with hot-reload configuration management!");
+            info!("Edit ./config/*.yaml files to update filters, patterns, and timers without restart!");
         }
+    }
+}
+
+// Keep the function signature with Arc:
+async fn handle_config_commands(
+    message: &ChatMessage, 
+    config_commands: &ConfigCommands,
+    enhanced_moderation: &EnhancedModerationSystem
+) -> Option<String> {
+    if !message.content.starts_with("!") {
+        return None;
+    }
+    
+    let parts: Vec<&str> = message.content[1..].split_whitespace().collect();
+    let command = parts.first()?;
+    let args = &parts[1..];
+    
+    match *command {
+        "reloadconfig" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            let config_type = args.first().copied();
+            match config_commands.handle_reload_command(config_type).await {
+                Ok(response) => Some(format!("Success: {}", response)),
+                Err(e) => Some(format!("Reload failed: {}", e)),
+            }
+        }
+        
+        "configstatus" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            match config_commands.handle_status_command().await {
+                Ok(response) => Some(response),
+                Err(e) => Some(format!("Status error: {}", e)),
+            }
+        }
+        
+        "validateconfig" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            match config_commands.handle_validate_command().await {
+                Ok(response) => Some(response),
+                Err(e) => Some(format!("Validation error: {}", e)),
+            }
+        }
+        
+        "exportconfig" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            let format = args.first().copied().unwrap_or("json");
+            match config_commands.handle_export_command(format).await {
+                Ok(response) => Some(response),
+                Err(e) => Some(format!("Export failed: {}", e)),
+            }
+        }
+        
+        "backupconfig" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            match config_commands.handle_backup_command().await {
+                Ok(response) => Some(response),
+                Err(e) => Some(format!("Backup failed: {}", e)),
+            }
+        }
+        
+        "appeal" => {
+            if args.is_empty() {
+                return Some("Usage: !appeal <reason>. Describe why you think the moderation action was incorrect.".to_string());
+            }
+            
+            let reason = args.join(" ");
+            
+            // Record the appeal for AI learning
+            let user_id = format!("{}:{}", message.platform, message.username);
+            if let Err(e) = enhanced_moderation.record_user_feedback(
+                "user_appeal",
+                &user_id,
+                notabot::bot::realtime_analytics::UserReportType::FalsePositive,
+                &message.content,
+                Some(reason.clone()),
+            ).await {
+                error!("Failed to record user appeal: {}", e);
+            }
+            
+            Some(format!("Appeal recorded: '{}'. Our AI will learn from this feedback to improve accuracy. Thank you!", reason))
+        }
+        
+        "filterstats" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            // Get AI effectiveness report
+            match enhanced_moderation.get_effectiveness_report().await {
+                Ok(report) => {
+                    Some(format!(
+                        "Filter Stats: {:.1}% accuracy, {:.1}% satisfaction, {:.1}ms avg response, {} recommendations",
+                        report.overall_accuracy * 100.0,
+                        report.user_satisfaction * 100.0,
+                        report.performance_metrics.average_response_time,
+                        report.recommendations.len()
+                    ))
+                }
+                Err(e) => Some(format!("Failed to get filter stats: {}", e))
+            }
+        }
+        
+        "aiinfo" => {
+            // Get AI system status (available to all users)
+            let status = enhanced_moderation.get_system_status().await;
+            Some(format!(
+                "AI Status: Health {:.0}%, {} patterns active, Learning: {}, Optimization: {}",
+                status.system_health_score * 100.0,
+                status.total_patterns,
+                if status.learning_mode_enabled { "ON" } else { "OFF" },
+                if status.auto_optimization_enabled { "ON" } else { "OFF" }
+            ))
+        }
+        
+        "togglelearning" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            let enable = args.first().map(|&s| s == "on" || s == "true" || s == "enable");
+            match enable {
+                Some(true) => {
+                    enhanced_moderation.set_learning_mode(true).await;
+                    Some("AI learning mode enabled. The system will adapt from user feedback.".to_string())
+                }
+                Some(false) => {
+                    enhanced_moderation.set_learning_mode(false).await;
+                    Some("AI learning mode disabled. The system will use static patterns only.".to_string())
+                }
+                None => {
+                    let status = enhanced_moderation.get_system_status().await;
+                    Some(format!("AI learning mode is currently: {}", if status.learning_mode_enabled { "ON" } else { "OFF" }))
+                }
+            }
+        }
+        
+        "optimize" => {
+            if !message.is_mod {
+                return Some("This command is moderator-only.".to_string());
+            }
+            
+            match enhanced_moderation.auto_optimize_filters().await {
+                Ok(result) => {
+                    if result.optimizations_applied > 0 {
+                        Some(format!(
+                            "Optimization complete: {} improvements applied, {:.1}% performance gain",
+                            result.optimizations_applied,
+                            result.performance_improvement
+                        ))
+                    } else {
+                        Some("No optimizations needed. System is already running efficiently.".to_string())
+                    }
+                }
+                Err(e) => Some(format!("Optimization failed: {}", e))
+            }
+        }
+        
+        _ => None, // Not a config command
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use notabot::bot::enhanced_moderation::EnhancedModerationSystem;
+    use tempfile::tempdir;
 
     #[tokio::test]
-    async fn test_ai_enhanced_bot_creation() {
-        let bot = ChatBot::new();
+    async fn test_configuration_system_integration() {
+        // Test that the configuration system can be initialized
+        let temp_dir = tempdir().unwrap();
+        let config_manager = Arc::new(ConfigurationManager::new(temp_dir.path()));
         
-        // Test that enhanced features can be created
-        let enhanced_moderation = EnhancedModerationSystem::new(bot.moderation_system.clone());
-        
-        // Test pattern setup
-        let result = enhanced_moderation.setup_default_advanced_patterns().await;
+        let result = config_manager.initialize().await;
         assert!(result.is_ok());
         
-        // Test feature enabling
-        enhanced_moderation.set_enhanced_features_enabled(true).await;
-        enhanced_moderation.set_learning_mode(true).await;
-        
-        let status = enhanced_moderation.get_system_status().await;
-        assert!(status.enhanced_features_enabled);
-        assert!(status.learning_mode_enabled);
+        // Test that configuration files were created
+        assert!(temp_dir.path().join("filters.yaml").exists());
+        assert!(temp_dir.path().join("patterns.yaml").exists());
+        assert!(temp_dir.path().join("timers.yaml").exists());
+        assert!(temp_dir.path().join("bot.yaml").exists());
     }
 
     #[tokio::test]
-    async fn test_advanced_pattern_detection() {
+    async fn test_config_integration_with_moderation() {
+        let temp_dir = tempdir().unwrap();
+        let config_manager = Arc::new(ConfigurationManager::new(temp_dir.path()));
         let bot = ChatBot::new();
-        let enhanced_moderation = bot.create_enhanced_moderation();
         
-        // Setup patterns
-        enhanced_moderation.setup_default_advanced_patterns().await.unwrap();
+        config_manager.initialize().await.unwrap();
         
-        // Test messages that should be caught by AI
-        let test_messages = vec![
-            "sp4m message with l33t sp34k",  // Leetspeak
-            "spaaaam message",               // Repeated chars
-            "café spam message",             // Unicode
-            "spam with symbols!!!!!!",      // Symbol spam
-        ];
-        
-        for content in test_messages {
-            let message = ChatMessage {
-                platform: "test".to_string(),
-                channel: "testchannel".to_string(),
-                username: "testuser".to_string(),
-                display_name: Some("Test User".to_string()),
-                content: content.to_string(),
-                timestamp: chrono::Utc::now(),
-                user_badges: vec![],
-                is_mod: false,
-                is_subscriber: false,
-            };
-            
-            let result = enhanced_moderation.check_message_enhanced(&message, None).await;
-            
-            // AI should detect patterns in test messages
-            if let Some(result) = result {
-                println!("AI detected patterns in '{}': {:?}", content, result.advanced_patterns);
-                assert!(result.confidence > 0.5);
-            }
-        }
-    }
-
-    #[test]
-    fn test_configuration_files() {
-        // Test that config files can be created
-        let nightbot_path = Path::new("nightbot_import.json");
-        let community_path = Path::new("community_filters.json");
-        
-        // These files should be created by the setup process
-        // In a real environment, they would exist or be created
-        assert!(nightbot_path.file_name().is_some());
-        assert!(community_path.file_name().is_some());
+        let config_integration = ConfigIntegration::new(config_manager, bot.get_moderation_system());
+        let result = config_integration.initialize().await;
+        assert!(result.is_ok());
     }
 }

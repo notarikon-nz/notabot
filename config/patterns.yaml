@@ -1,0 +1,216 @@
+# config/patterns.yaml - Advanced Pattern Configuration
+version: "2.0"
+description: "NotaBot Advanced Pattern Configuration with AI Enhancement"
+last_updated: "2025-01-17T12:00:00Z"
+
+global_settings:
+  parallel_processing: true
+  max_processing_threads: 4
+  cache_enabled: true
+  cache_size_mb: 50
+  performance_profiling: true
+  auto_optimization: true
+
+ml_config:
+  enabled: true
+  training_mode: "online"
+  training_data_retention_days: 30
+  model_update_frequency: "daily"
+  feature_extraction:
+    text_features: true
+    user_behavior_features: true
+    temporal_features: true
+    platform_features: true
+    custom_features: []
+  model_parameters: {}
+
+pattern_collections:
+  spam_detection:
+    name: "Spam Detection Patterns"
+    description: "Advanced AI patterns for spam detection"
+    enabled: true
+    category: "spam"
+    priority: 9
+    confidence_threshold: 0.75
+    learning_enabled: true
+    auto_update: true
+    max_processing_time_ms: 100
+    cache_results: true
+    parallel_processing: true
+    
+    patterns:
+      - id: "fuzzy_spam_general"
+        name: "Fuzzy Spam Detection"
+        enabled: true
+        pattern_type: "fuzzy_match"
+        parameters:
+          pattern: "spam"
+          threshold: 0.8
+        weight: 1.0
+        min_confidence: 0.7
+        learning_rate: 0.1
+        tags: ["spam", "fuzzy", "general"]
+      
+      - id: "leetspeak_spam"
+        name: "Leetspeak Spam Detection"
+        enabled: true
+        pattern_type: "leetspeak"
+        parameters:
+          pattern: "spam"
+        weight: 1.0
+        min_confidence: 0.8
+        learning_rate: 0.05
+        tags: ["spam", "leetspeak", "evasion"]
+      
+      - id: "zalgo_corruption"
+        name: "Zalgo Text Detection"
+        enabled: true
+        pattern_type: "zalgo_text"
+        parameters: {}
+        weight: 1.0
+        min_confidence: 0.9
+        learning_rate: 0.01
+        tags: ["zalgo", "corruption", "unicode"]
+
+  crypto_patterns:
+    name: "Cryptocurrency Patterns"
+    description: "Specialized patterns for crypto-related spam and scams"
+    enabled: true
+    category: "financial"
+    priority: 10
+    confidence_threshold: 0.8
+    learning_enabled: true
+    auto_update: true
+    max_processing_time_ms: 150
+    cache_results: true
+    parallel_processing: true
+    
+    patterns:
+      - id: "fuzzy_crypto_investment"
+        name: "Crypto Investment Fuzzy Matching"
+        enabled: true
+        pattern_type: "fuzzy_match"
+        parameters:
+          pattern: "cryptocurrency investment"
+          threshold: 0.7
+        weight: 0.9
+        min_confidence: 0.75
+        learning_rate: 0.08
+        tags: ["crypto", "investment", "fuzzy"]
+      
+      - id: "leetspeak_bitcoin"
+        name: "Bitcoin Leetspeak Detection"
+        enabled: true
+        pattern_type: "leetspeak"
+        parameters:
+          pattern: "bitcoin"
+        weight: 0.8
+        min_confidence: 0.7
+        learning_rate: 0.06
+        tags: ["bitcoin", "leetspeak", "crypto"]
+      
+      - id: "unicode_crypto_terms"
+        name: "Unicode Crypto Terms"
+        enabled: true
+        pattern_type: "unicode_normalized"
+        parameters:
+          pattern: "ethereum"
+        weight: 0.7
+        min_confidence: 0.8
+        learning_rate: 0.04
+        tags: ["ethereum", "unicode", "crypto"]
+
+  social_engineering:
+    name: "Social Engineering Patterns"
+    description: "Patterns to detect social manipulation and impersonation"
+    enabled: true
+    category: "security"
+    priority: 9
+    confidence_threshold: 0.85
+    learning_enabled: true
+    auto_update: false  # Manual updates for security patterns
+    max_processing_time_ms: 80
+    cache_results: true
+    parallel_processing: false
+    
+    patterns:
+      - id: "homoglyph_admin"
+        name: "Admin Homoglyph Detection"
+        enabled: true
+        pattern_type: "homoglyph"
+        parameters:
+          pattern: "admin"
+        weight: 1.0
+        min_confidence: 0.9
+        learning_rate: 0.02
+        tags: ["admin", "homoglyph", "impersonation"]
+      
+      - id: "homoglyph_moderator"
+        name: "Moderator Homoglyph Detection"
+        enabled: true
+        pattern_type: "homoglyph"
+        parameters:
+          pattern: "moderator"
+        weight: 1.0
+        min_confidence: 0.9
+        learning_rate: 0.02
+        tags: ["moderator", "homoglyph", "impersonation"]
+      
+      - id: "fuzzy_official_support"
+        name: "Official Support Variations"
+        enabled: true
+        pattern_type: "fuzzy_match"
+        parameters:
+          pattern: "official support"
+          threshold: 0.75
+        weight: 0.9
+        min_confidence: 0.85
+        learning_rate: 0.03
+        tags: ["support", "official", "impersonation"]
+
+  evasion_detection:
+    name: "Evasion Detection Patterns"
+    description: "Patterns to detect attempts to evade filters"
+    enabled: true
+    category: "evasion"
+    priority: 8
+    confidence_threshold: 0.7
+    learning_enabled: true
+    auto_update: true
+    max_processing_time_ms: 120
+    cache_results: true
+    parallel_processing: true
+    
+    patterns:
+      - id: "repeated_char_spam"
+        name: "Repeated Character Compression"
+        enabled: true
+        pattern_type: "repeated_char_compression"
+        parameters:
+          pattern: "spam"
+        weight: 0.8
+        min_confidence: 0.6
+        learning_rate: 0.07
+        tags: ["spam", "repetition", "evasion"]
+      
+      - id: "encoded_content_spam"
+        name: "Encoded Content Detection"
+        enabled: true
+        pattern_type: "encoded_content"
+        parameters:
+          pattern: "spam"
+        weight: 0.9
+        min_confidence: 0.8
+        learning_rate: 0.05
+        tags: ["spam", "encoded", "base64", "evasion"]
+      
+      - id: "phonetic_spam"
+        name: "Phonetic Spam Detection"
+        enabled: true
+        pattern_type: "phonetic"
+        parameters:
+          pattern: "spam"
+        weight: 0.7
+        min_confidence: 0.65
+        learning_rate: 0.06
+        tags: ["spam", "phonetic", "soundex"]

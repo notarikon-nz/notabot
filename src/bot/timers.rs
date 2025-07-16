@@ -1,6 +1,5 @@
 use anyhow::{Result, Context};
 use log::{debug, error, info, warn};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
