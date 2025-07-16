@@ -19,8 +19,7 @@ async fn main() -> Result<()> {
         .filter_level(log::LevelFilter::Info)
         .init();
 
-    info!("🚀 Starting NotaBot v{} - AI-Powered Moderation System!", env!("CARGO_PKG_VERSION"));
-    info!("🔥 Phase 2 Features: Advanced AI, Smart Escalation, Real-time Analytics");
+    info!("Starting NotaBot v{} - AI-Powered Moderation System!", env!("CARGO_PKG_VERSION"));
 
     // Create enhanced bot instance
     let mut bot = ChatBot::new();
@@ -29,24 +28,24 @@ async fn main() -> Result<()> {
     if let Ok(twitch_config) = TwitchConfig::from_env() {
         let twitch_connection = TwitchConnection::new(twitch_config);
         bot.add_connection(Box::new(twitch_connection)).await;
-        info!("✅ Twitch connection configured with AI moderation");
+        info!("Twitch connection configured with AI moderation");
     } else {
-        warn!("⚠️ Twitch configuration not found - add TWITCH_USERNAME, TWITCH_OAUTH_TOKEN, TWITCH_CHANNELS");
+        warn!("Twitch configuration not found - add TWITCH_USERNAME, TWITCH_OAUTH_TOKEN, TWITCH_CHANNELS");
     }
 
     if let Ok(youtube_config) = YouTubeConfig::from_env() {
         let youtube_connection = YouTubeConnection::new(youtube_config);
         bot.add_connection(Box::new(youtube_connection)).await;
-        info!("✅ YouTube Live Chat configured with cross-platform AI");
+        info!("YouTube Live Chat configured with cross-platform AI");
     } else {
-        info!("ℹ️ YouTube config not found - add YOUTUBE_API_KEY, YOUTUBE_OAUTH_TOKEN, YOUTUBE_LIVE_CHAT_ID");
+        info!("YouTube config not found - add YOUTUBE_API_KEY, YOUTUBE_OAUTH_TOKEN, YOUTUBE_LIVE_CHAT_ID");
     }
 
     // =================================================================
     // PHASE 2: AI-POWERED MODERATION SYSTEM
     // =================================================================
     
-    info!("🧠 Initializing AI-powered moderation system...");
+    info!("Initializing AI-powered moderation system...");
     
     // Create enhanced moderation system
     let enhanced_moderation = bot.create_enhanced_moderation();
@@ -56,7 +55,7 @@ async fn main() -> Result<()> {
     enhanced_moderation.set_learning_mode(true).await; // AI learns from feedback
     
     // Setup advanced AI patterns
-    info!("🔬 Loading advanced AI detection patterns...");
+    info!("Loading advanced AI detection patterns...");
     enhanced_moderation.setup_default_advanced_patterns().await?;
     
     // Add custom advanced patterns for superior detection
@@ -188,69 +187,6 @@ async fn main() -> Result<()> {
           filter_config.get_config().spam_filters.len(),
           filter_config.get_config().advanced_patterns.len());
 
-
-        /*
-
-    // Advanced blacklist with AI patterns
-    bot.add_blacklist_filter(
-        vec![
-            // Evolved crypto spam patterns
-            "~/(?i)(free|easy)\\s*(money|crypto|bitcoin|eth)/".to_string(),
-            "~/(?i)(guaranteed|100%)\\s*(profit|return|roi)/".to_string(),
-            "~/(?i)(invest|trade)\\s*(now|today|immediately)/".to_string(),
-            
-            // Social media manipulation
-            "~/(?i)(follow|sub)\\s*(for|4)\\s*(follow|sub)/".to_string(),
-            "~/(?i)(view|like)\\s*(for|4)\\s*(view|like)/".to_string(),
-            "~/(?i)check\\s*(out|my)\\s*(channel|stream)/".to_string(),
-            
-            // Impersonation attempts with fuzzy matching
-            "staff*".to_string(),
-            "admin*".to_string(),
-            "official*".to_string(),
-            "*support*".to_string(),
-            
-            // FIXED: URL patterns without negative lookbehind (Rust doesn't support lookbehind)
-            // Instead of complex negative lookbehind, use multiple patterns for better control
-            "~/(?i)(?:https?:\\/\\/)?(?:www\\.)?[a-z0-9-]+\\.[a-z]{2,}(?:\\/[^\\s]*)?/".to_string(),
-
-            // Add whitelist exceptions as separate patterns if needed:
-            // "!discord.gg".to_string(),  // Use ! prefix for exceptions if your system supports it
-            // "!youtube.com".to_string(),
-            // "!twitch.tv".to_string(),
-            
-            // Phone number variations (international)
-            "~/\\+?\\d{1,4}[\\s.-]?\\(?\\d{1,4}\\)?[\\s.-]?\\d{1,4}[\\s.-]?\\d{1,9}/".to_string(),
-            
-            // Email patterns
-            "~/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/".to_string(),
-            
-            // Excessive punctuation and symbols
-            "~/[!@#$%^&*()_+={}\\[\\]|\\\\:;\"'<>,.?~`]{5,}/".to_string(),
-            
-            // FIXED: Repeated words pattern without backreferences
-            // Instead of using backreferences (\1), use a simpler approach
-            "~/(?i)\\b(\\w+)\\s+\\1\\s+\\1/".to_string(), // This won't work in Rust
-            // Replace with these patterns for common repeated words:
-            "~/\\b(spam)\\s+(spam)\\s+(spam)\\b/".to_string(),
-            "~/\\b(help)\\s+(help)\\s+(help)\\b/".to_string(),
-            "~/\\b(please)\\s+(please)\\s+(please)\\b/".to_string(),
-            "~/\\b(free)\\s+(free)\\s+(free)\\b/".to_string(),
-            "~/\\b(follow)\\s+(follow)\\s+(follow)\\b/".to_string(),
-            
-            // Or even simpler - just detect excessive repetition of specific characters:
-            "~/a{5,}|e{5,}|i{5,}|o{5,}|u{5,}/".to_string(), // 5+ vowels in a row
-            "~/!{3,}|\\?{3,}|\\.{3,}/".to_string(), // Excessive punctuation
-        ],
-        Some(1800), // 30 minute timeout for serious violations
-        Some(ExemptionLevel::Regular), // Regulars exempt (AI determines regulars)
-        Some(false), // Case insensitive
-        Some(false), // Not whole words only
-        Some("🤖 AI detected spam pattern. Appeal with !appeal if this was a mistake.".to_string()),
-    ).await?;
-*/
-
-
     // AI-powered escalation system
     let smart_escalation = SmartEscalation {
         history_weight: 0.4, // Higher weight for user history
@@ -268,7 +204,7 @@ async fn main() -> Result<()> {
         SpamFilterType::ExcessiveCaps { max_percentage: 60 }, // More lenient with AI context
         0, // Smart escalation handles timeout
         ExemptionLevel::Subscriber,
-        Some("🤖 AI detected excessive caps. Please use normal text formatting.".to_string()),
+        Some("AI detected excessive caps. Please use normal text formatting.".to_string()),
         false,
     ).await?;
 
@@ -277,7 +213,7 @@ async fn main() -> Result<()> {
         SpamFilterType::SymbolSpam { max_percentage: 50 },
         0, // Smart escalation
         ExemptionLevel::Regular,
-        Some("🤖 Please reduce symbol usage for better readability.".to_string()),
+        Some("Please reduce symbol usage for better readability.".to_string()),
         true, // Silent mode to reduce bot chatter
     ).await?;
 
@@ -286,11 +222,11 @@ async fn main() -> Result<()> {
         SpamFilterType::RateLimit { max_messages: 4, window_seconds: 15 }, // Stricter with AI backup
         0,
         ExemptionLevel::Subscriber,
-        Some("🤖 Please slow down your messages to maintain chat quality.".to_string()),
+        Some("Please slow down your messages to maintain chat quality.".to_string()),
         false,
     ).await?;
 
-    info!("✅ AI-enhanced spam protection configured with smart escalation");
+    info!("AI-enhanced spam protection configured with smart escalation");
 
     // =================================================================
     // IMPORT EXISTING CONFIGURATIONS
@@ -299,7 +235,7 @@ async fn main() -> Result<()> {
     // Try to import existing NightBot configuration if available
     let nightbot_import_path = Path::new("nightbot_import.json");
     if nightbot_import_path.exists() {
-        info!("📁 Found NightBot import file, upgrading to AI...");
+        info!("Found NightBot import file, upgrading to AI...");
         
         match enhanced_moderation.import_filters(
             nightbot_import_path,
@@ -312,12 +248,12 @@ async fn main() -> Result<()> {
             }
         ).await {
             Ok(result) => {
-                info!("✅ Successfully imported {} filters from NightBot", result.imported_count);
+                info!("Successfully imported {} filters from NightBot", result.imported_count);
                 if result.warning_count > 0 {
-                    warn!("⚠️ {} warnings during import: {:?}", result.warning_count, result.warnings);
+                    warn!("{} warnings during import: {:?}", result.warning_count, result.warnings);
                 }
                 if result.error_count > 0 {
-                    error!("❌ {} errors during import: {:?}", result.error_count, result.errors);
+                    error!("{} errors during import: {:?}", result.error_count, result.errors);
                 }
             }
             Err(e) => {
@@ -329,7 +265,7 @@ async fn main() -> Result<()> {
     // Load community filter pack if available
     let community_filters_path = Path::new("community_filters.json");
     if community_filters_path.exists() {
-        info!("🌐 Loading community filter pack...");
+        info!("Loading community filter pack...");
         
         if let Err(e) = enhanced_moderation.import_filters(
             community_filters_path,
@@ -338,7 +274,7 @@ async fn main() -> Result<()> {
         ).await {
             warn!("Failed to load community filters: {}", e);
         } else {
-            info!("✅ Community filter pack loaded successfully");
+            info!("Community filter pack loaded successfully");
         }
     }
 
@@ -346,61 +282,61 @@ async fn main() -> Result<()> {
     // COMMANDS WITH AI INTEGRATION
     // =================================================================
     
-    info!("🤖 Registering AI-enhanced commands...");
+    info!("Registering AI-enhanced commands...");
 
     // Basic commands
     bot.add_command("hello".to_string(), "Hello $(user)! 👋 Welcome to our AI-moderated stream on $(platform)!".to_string(), false, 5).await;
-    bot.add_command("uptime".to_string(), "🤖 AI moderation system running smoothly on $(platform)! 🚀".to_string(), false, 30).await;
+    bot.add_command("uptime".to_string(), "AI moderation system running smoothly on $(platform)! ".to_string(), false, 30).await;
     
     // AI and moderation commands
     bot.add_command("ai".to_string(), 
-        "🧠 This stream uses NotaBot's AI-powered moderation system! 10x smarter than NightBot with real-time learning 🚀".to_string(), 
+        "This stream uses NotaBot's AI-powered moderation system! 10x smarter than NightBot with real-time learning".to_string(), 
         false, 30).await;
     
     bot.add_command("modstats".to_string(), 
-        "📊 AI Moderation Stats: Use !filterstats for details (mod only)".to_string(), 
+        "AI Moderation Stats: Use !filterstats for details (mod only)".to_string(), 
         false, 60).await;
     
     bot.add_command("appeal".to_string(), 
-        "🤖 To appeal a moderation action, explain why it was incorrect. Our AI learns from feedback! Format: !appeal <reason>".to_string(), 
+        "To appeal a moderation action, explain why it was incorrect. Our AI learns from feedback! Format: !appeal <reason>".to_string(), 
         false, 300).await; // 5 minute cooldown
     
     bot.add_command("patterns".to_string(), 
-        "🔬 AI Detection: Fuzzy matching, leetspeak, Unicode normalization, homoglyphs, Zalgo text + more! (mod only)".to_string(), 
+        "AI Detection: Fuzzy matching, leetspeak, Unicode normalization, homoglyphs, Zalgo text + more! (mod only)".to_string(), 
         true, 30).await;
     
     // Enhanced filter management commands
     bot.add_command("filters".to_string(), 
-        "🛡️ AI Filter Management: !filters <enable|disable|add|remove|list> | !blacklist <add|remove|list> | !aiexport".to_string(), 
+        "AI Filter Management: !filters <enable|disable|add|remove|list> | !blacklist <add|remove|list> | !aiexport".to_string(), 
         true, 10).await;
     
     bot.add_command("aiexport".to_string(), 
-        "📤 Export AI-optimized filters: !aiexport [format] - Available: json, yaml, nightbot".to_string(), 
+        "Export AI-optimized filters: !aiexport [format] - Available: json, yaml, nightbot".to_string(), 
         true, 60).await;
     
     bot.add_command("aiimport".to_string(), 
-        "📥 Import filters with AI enhancement: !aiimport <file> [format]".to_string(), 
+        "Import filters with AI enhancement: !aiimport <file> [format]".to_string(), 
         true, 60).await;
     
     bot.add_command("learning".to_string(), 
-        "🧠 AI Learning Mode: !learning <on|off> - Enables/disables AI learning from chat patterns".to_string(), 
+        "AI Learning Mode: !learning <on|off> - Enables/disables AI learning from chat patterns".to_string(), 
         true, 30).await;
     
     bot.add_command("optimize".to_string(), 
-        "⚡ Auto-optimize filters based on AI analytics: !optimize".to_string(), 
+        "Auto-optimize filters based on AI analytics: !optimize".to_string(), 
         true, 300).await; // 5 minute cooldown
     
     // Points and achievement commands
-    bot.add_command("points".to_string(), "💰 AI-tracked points: !points [user] - Earned through positive chat participation".to_string(), false, 5).await;
-    bot.add_command("give".to_string(), "💝 Transfer points: !give <user> <amount> - Builds community reputation".to_string(), false, 60).await;
-    bot.add_command("achievements".to_string(), "🏆 AI-powered achievements: !achievements [user] - Unlock through positive behavior".to_string(), false, 10).await;
-    bot.add_command("leaderboard".to_string(), "🥇 Community leaders: !leaderboard [number] - Top contributors by AI metrics".to_string(), false, 30).await;
+    bot.add_command("points".to_string(), "AI-tracked points: !points [user] - Earned through positive chat participation".to_string(), false, 5).await;
+    bot.add_command("give".to_string(), "Transfer points: !give <user> <amount> - Builds community reputation".to_string(), false, 60).await;
+    bot.add_command("achievements".to_string(), "AI-powered achievements: !achievements [user] - Unlock through positive behavior".to_string(), false, 10).await;
+    bot.add_command("leaderboard".to_string(), "Community leaders: !leaderboard [number] - Top contributors by AI metrics".to_string(), false, 30).await;
     
     // Fun AI-themed commands
-    bot.add_command("robot".to_string(), "🤖 BEEP BOOP! I am NotaBot, your friendly AI moderator. I learn and adapt to keep chat awesome! 🚀".to_string(), false, 30).await;
-    bot.add_command("skynet".to_string(), "😄 Don't worry, I'm a friendly AI! I just want to make chat better for everyone. No robot uprising here! 🤖❤️".to_string(), false, 60).await;
+    bot.add_command("robot".to_string(), "BEEP BOOP! I am NotaBot, your friendly AI moderator. I learn and adapt to keep chat awesome! ".to_string(), false, 30).await;
+    bot.add_command("skynet".to_string(), "Don't worry, I'm a friendly AI! I just want to make chat better for everyone. No robot uprising here!".to_string(), false, 60).await;
     bot.add_command("ai_vs_nightbot".to_string(), 
-        "🔥 NotaBot vs NightBot: 10x faster, AI-powered, learns from mistakes, real-time analytics, community intelligence! No contest! 💪".to_string(), 
+        "NotaBot vs NightBot: 10x faster, AI-powered, learns from mistakes, real-time analytics, community intelligence! No contest!".to_string(), 
         false, 120).await;
 
     bot.add_command("reloadfilters".to_string(), "Reloading filters from configuration file...".to_string(), true, 60).await; // Mod only
@@ -414,25 +350,25 @@ async fn main() -> Result<()> {
     // =================================================================
     
     bot.add_timer("ai_features".to_string(), 
-        "🤖 This stream is protected by NotaBot's AI moderation! Features: Smart pattern detection, learning algorithms, real-time optimization 🧠".to_string(), 
+        "This stream is protected by NotaBot's AI moderation! Features: Smart pattern detection, learning algorithms, real-time optimization".to_string(), 
         900).await?; // 15 minutes
     
     bot.add_timer("community_ai".to_string(),
-        "🌟 Our AI learns from community feedback! Use !appeal if you think moderation made a mistake - it helps the AI improve! 🚀".to_string(),
+        "Our AI learns from community feedback! Use !appeal if you think moderation made a mistake - it helps the AI improve! ".to_string(),
         1200).await?; // 20 minutes
     
     bot.add_timer("ai_vs_nightbot".to_string(),
-        "💪 Why NotaBot > NightBot: 10x faster response, AI pattern detection, automatic optimization, community filter sharing, 99.9% uptime! 🔥".to_string(),
+        "Why NotaBot > NightBot: 10x faster response, AI pattern detection, automatic optimization, community filter sharing, 99.9% uptime!".to_string(),
         1800).await?; // 30 minutes
         
     bot.add_timer("filter_sharing".to_string(),
-        "🌐 Our filters auto-improve and can be shared with other streamers! Part of the NotaBot community intelligence network 📊".to_string(),
+        "Our filters auto-improve and can be shared with other streamers! Part of the NotaBot community intelligence network".to_string(),
         2400).await?; // 40 minutes
 
     // Platform-specific AI announcements
     bot.add_timer_advanced(
         "twitch_ai_exclusive".to_string(),
-        "🔥 Twitch Exclusive: Our AI detects even advanced evasion techniques! Leetspeak, Unicode tricks, homoglyphs - nothing gets past! 🛡️".to_string(),
+        "Twitch Exclusive: Our AI detects even advanced evasion techniques! Leetspeak, Unicode tricks, homoglyphs - nothing gets past!".to_string(),
         1500, // 25 minutes
         vec![], // All channels
         vec!["twitch".to_string()] // Twitch only
@@ -440,13 +376,13 @@ async fn main() -> Result<()> {
 
     bot.add_timer_advanced(
         "youtube_ai_exclusive".to_string(),
-        "🧠 YouTube Exclusive: Cross-platform AI intelligence! Patterns learned on Twitch protect YouTube chat too! 🔗".to_string(),
+        "YouTube Exclusive: Cross-platform AI intelligence! Patterns learned on Twitch protect YouTube chat too!".to_string(),
         1500, // 25 minutes
         vec![], // All channels
         vec!["youtube".to_string()] // YouTube only
     ).await?;
 
-    info!("✅ AI-themed timers configured");
+    info!("AI-themed timers configured");
 
     // =================================================================
     // AUTO-EXPORT FOR COMMUNITY SHARING
@@ -497,7 +433,7 @@ async fn main() -> Result<()> {
     if let Err(e) = bot.start_web_dashboard(dashboard_port).await {
         warn!("Failed to start web dashboard: {}", e);
     } else {
-        info!("🌐 AI Analytics Dashboard: http://localhost:{}", dashboard_port);
+        info!("AI Analytics Dashboard: http://localhost:{}", dashboard_port);
     }
 
     // Start core bot systems
@@ -506,23 +442,13 @@ async fn main() -> Result<()> {
         return Err(e);
     }
 
-    info!("🎉 NotaBot AI System Started Successfully!");
-    info!("📊 Analytics Dashboard: http://localhost:{}", dashboard_port);
-    info!("🧠 AI Features: ACTIVE with real-time learning");
-    info!("🛡️ Spam Protection: ENHANCED with advanced pattern detection");
-    info!("💰 Economy System: ACTIVE with AI-tracked reputation");
-    info!("🏆 Achievements: ACTIVE with behavior-based unlocks");
-    info!("🤖 Commands: !ai, !filters, !patterns, !appeal, !optimize");
-    
-    info!("🔥 SUPERIORITY ACHIEVED:");
-    info!("   🚀 10x faster than NightBot (sub-millisecond vs 10-50ms)");
-    info!("   🧠 AI pattern detection vs static regex");
-    info!("   📈 Real-time analytics vs no monitoring");
-    info!("   🤝 Community intelligence vs isolated configs");
-    info!("   ⚡ Auto-optimization vs manual tuning");
-    info!("   🌐 Cross-platform sync vs single-platform");
-    info!("   💾 5-10MB memory vs 50-100MB JavaScript overhead");
-    info!("   🛡️ 99.9% uptime vs JavaScript reliability issues");
+    info!("NotaBot AI System Started Successfully!");
+    info!("Analytics Dashboard: http://localhost:{}", dashboard_port);
+    info!("AI Features: ACTIVE with real-time learning");
+    info!("Spam Protection: ENHANCED with advanced pattern detection");
+    info!("Economy System: ACTIVE with AI-tracked reputation");
+    info!("Achievements: ACTIVE with behavior-based unlocks");
+    info!("Commands: !ai, !filters, !patterns, !appeal, !optimize");
 
     // =================================================================
     // AI MONITORING AND OPTIMIZATION LOOP
@@ -538,7 +464,7 @@ async fn main() -> Result<()> {
         let health = bot.health_check().await;
         let unhealthy: Vec<_> = health.iter().filter(|(_, &h)| !h).collect();
         if !unhealthy.is_empty() {
-            error!("🚨 Unhealthy platforms: {:?}", unhealthy);
+            error!("Unhealthy platforms: {:?}", unhealthy);
         }
         
         // Periodic AI analytics (every 5 minutes)
@@ -548,7 +474,7 @@ async fn main() -> Result<()> {
             
             // Get AI system status
             let ai_status = enhanced_moderation.get_system_status().await;
-            info!("🤖 AI Status: Health={:.1}%, Patterns={}, Alerts={}, Learning={}", 
+            info!("AI Status: Health={:.1}%, Patterns={}, Alerts={}, Learning={}", 
                   ai_status.system_health_score * 100.0,
                   ai_status.total_patterns,
                   ai_status.active_alerts,
@@ -557,7 +483,7 @@ async fn main() -> Result<()> {
             
             // Get effectiveness report
             if let Ok(report) = enhanced_moderation.get_effectiveness_report().await {
-                info!("📊 AI Performance: Accuracy={:.1}%, Satisfaction={:.1}%, AvgResponse={:.1}ms",
+                info!("AI Performance: Accuracy={:.1}%, Satisfaction={:.1}%, AvgResponse={:.1}ms",
                       report.overall_accuracy * 100.0,
                       report.user_satisfaction * 100.0,
                       report.performance_metrics.average_response_time
@@ -566,14 +492,14 @@ async fn main() -> Result<()> {
                 // Log any critical recommendations
                 for rec in &report.recommendations {
                     if matches!(rec.priority, notabot::bot::realtime_analytics::RecommendationPriority::Critical) {
-                        warn!("🚨 Critical AI Recommendation: {}", rec.title);
+                        warn!("Critical AI Recommendation: {}", rec.title);
                     }
                 }
             }
             
             // General bot stats
             if let Ok(stats) = bot.get_bot_stats().await {
-                debug!("📈 Full Bot Stats: {}", serde_json::to_string_pretty(&stats).unwrap_or_default());
+                debug!("Full Bot Stats: {}", serde_json::to_string_pretty(&stats).unwrap_or_default());
             }
         }
         
@@ -589,7 +515,7 @@ async fn main() -> Result<()> {
             match enhanced_moderation.auto_optimize_filters().await {
                 Ok(result) => {
                     if result.optimizations_applied > 0 {
-                        info!("🔧 AI Auto-Optimization: {} improvements applied, {:.1}% performance gain",
+                        info!("AI Auto-Optimization: {} improvements applied, {:.1}% performance gain",
                               result.optimizations_applied, result.performance_improvement);
                     }
                 }
@@ -601,7 +527,7 @@ async fn main() -> Result<()> {
         
         // Heartbeat message every 10 minutes
         if stats_counter == 0 && optimization_counter % 10 == 0 {
-            info!("💪 NotaBot AI running strong - The definitive NightBot replacement!");
+            info!("NotaBot AI running strong - The definitive NightBot replacement!");
         }
     }
 }
@@ -663,7 +589,7 @@ mod tests {
             
             // AI should detect patterns in test messages
             if let Some(result) = result {
-                println!("✅ AI detected patterns in '{}': {:?}", content, result.advanced_patterns);
+                println!("AI detected patterns in '{}': {:?}", content, result.advanced_patterns);
                 assert!(result.confidence > 0.5);
             }
         }
