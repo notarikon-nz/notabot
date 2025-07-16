@@ -12,6 +12,7 @@ pub mod achievement_commands;
 pub mod analytics;
 pub mod commands;
 pub mod config_integration;
+pub mod connection_pool;
 pub mod enhanced_moderation;
 pub mod filter_commands;
 pub mod filter_import_export;
@@ -22,9 +23,11 @@ pub mod pattern_matching;
 pub mod points;
 pub mod points_commands;
 pub mod realtime_analytics;
+pub mod shutdown;
 pub mod smart_escalation;
 pub mod timers;
 pub mod timer_commands;
+
 
 use commands::CommandSystem;
 use timers::TimerSystem;
