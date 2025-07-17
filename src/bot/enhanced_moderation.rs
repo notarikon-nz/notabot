@@ -44,6 +44,11 @@ impl EnhancedModerationSystem {
         }
     }
 
+    /// Get the underlying base moderation system for adaptive integration
+    pub fn get_base_moderation_system(&self) -> Arc<crate::bot::moderation::ModerationSystem> {
+        self.base_moderation.clone()
+    }
+
     /// Enhanced message checking with Phase 2 features
     pub async fn check_message_enhanced(
         &self,

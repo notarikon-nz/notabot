@@ -1,333 +1,128 @@
-# NotaBot Timer Configuration
-# Edit this file to update timers without rebuilding the bot!
-# Changes are automatically detected and applied within 30 seconds.
-
-version: "1.0"
-description: "NotaBot AI-Enhanced Timer Configuration"
-last_updated: "2025-07-16"
-author: "NotaBot Community"
-
-# Global timer settings
+version: '1.0'
+description: NotaBot AI-Enhanced Timer Configuration
 global_settings:
-  minimum_interval_seconds: 30  # Prevent spam
-  auto_reload: true            # Watch for file changes
-  variable_substitution: true  # Enable $(variable) replacement
-  platform_targeting: true    # Allow platform-specific timers
-  
-# Timer definitions
+  minimum_interval_seconds: 30
+  auto_reload: true
+  variable_substitution: true
+  platform_targeting: true
 timers:
-  # =================================================================
-  # AI AND FEATURE ANNOUNCEMENTS
-  # =================================================================
-  - name: "ai_features"
-    enabled: true
-    message: "This stream is protected by NotaBot's AI moderation! Features: Smart pattern detection, learning algorithms, real-time optimization ⚡"
-    interval_seconds: 900  # 15 minutes
-    channels: []  # Empty = all channels
-    platforms: []  # Empty = all platforms
-    description: "Showcase AI moderation features"
-    tags: ["ai", "features", "promotion"]
-    
-  - name: "community_ai"
-    enabled: true
-    message: "Our AI learns from community feedback! Use !appeal if you think moderation made a mistake - it helps the AI improve!"
-    interval_seconds: 1200  # 20 minutes
-    channels: []
-    platforms: []
-    description: "Explain AI learning capabilities"
-    tags: ["ai", "community", "education"]
-    
-  - name: "ai_vs_nightbot"
-    enabled: true
-    message: "Why NotaBot > NightBot: 10x faster response, AI pattern detection, automatic optimization, community filter sharing, 99.9% uptime!"
-    interval_seconds: 1800  # 30 minutes
-    channels: []
-    platforms: []
-    description: "Compare NotaBot advantages"
-    tags: ["comparison", "nightbot", "superiority"]
-    
-  - name: "filter_sharing"
-    enabled: true
-    message: "Our filters auto-improve and can be shared with other streamers! Part of the NotaBot community intelligence network"
-    interval_seconds: 2400  # 40 minutes
-    channels: []
-    platforms: []
-    description: "Promote community intelligence"
-    tags: ["community", "sharing", "intelligence"]
-
-  # =================================================================
-  # PLATFORM-SPECIFIC TIMERS
-  # =================================================================
-  - name: "twitch_ai_exclusive"
-    enabled: true
-    message: "Twitch Exclusive: Our AI detects even advanced evasion techniques! Leetspeak, Unicode tricks, homoglyphs - nothing gets past!"
-    interval_seconds: 1500  # 25 minutes
-    channels: []  # All Twitch channels
-    platforms: ["twitch"]  # Twitch only
-    description: "Twitch-specific AI features"
-    tags: ["twitch", "ai", "exclusive"]
-    
-  - name: "youtube_ai_exclusive"
-    enabled: true
-    message: "YouTube Exclusive: Cross-platform AI intelligence! Patterns learned on Twitch protect YouTube chat too!"
-    interval_seconds: 1500  # 25 minutes
-    channels: []  # All YouTube channels
-    platforms: ["youtube"]  # YouTube only
-    description: "YouTube-specific AI features"
-    tags: ["youtube", "ai", "cross-platform"]
-
-  # =================================================================
-  # COMMUNITY AND ENGAGEMENT
-  # =================================================================
-  - name: "points_economy"
-    enabled: true
-    message: "Earn points by chatting and being positive! Check your balance with !points - spend them on rewards! Use !leaderboard to see top contributors"
-    interval_seconds: 1800  # 30 minutes
-    channels: []
-    platforms: []
-    description: "Explain points system"
-    tags: ["points", "economy", "engagement"]
-    
-  - name: "achievements_system"
-    enabled: true
-    message: "Unlock achievements through positive behavior! !achievements to see yours, !progress for next unlocks. AI tracks your reputation!"
-    interval_seconds: 2100  # 35 minutes
-    channels: []
-    platforms: []
-    description: "Promote achievements"
-    tags: ["achievements", "gamification", "behavior"]
-    
-  - name: "commands_help"
-    enabled: true
-    message: "Useful commands: !ai (info) | !points (balance) | !achievements (unlocks) | !appeal (contest moderation) | !give (transfer points)"
-    interval_seconds: 2700  # 45 minutes
-    channels: []
-    platforms: []
-    description: "Show available commands"
-    tags: ["commands", "help", "tutorial"]
-
-  # =================================================================
-  # STREAM-SPECIFIC CONTENT
-  # =================================================================
-  - name: "social_media"
-    enabled: true
-    message: "📱 Follow the stream: Twitter @$(channel) | Discord discord.gg/$(channel) | YouTube youtube.com/$(channel) - AI-moderated communities!"
-    interval_seconds: 3600  # 60 minutes
-    channels: []
-    platforms: []
-    description: "Social media promotion"
-    tags: ["social", "promotion", "community"]
-    variables:
-      - "$(channel)"  # Will be replaced with actual channel name
-    
-  - name: "support_stream"
-    enabled: true
-    message: "Support the stream: Subscribe, follow, or donate! Every bit helps improve our AI moderation system! $(user) appreciates you!"
-    interval_seconds: 4500  # 75 minutes
-    channels: []
-    platforms: []
-    description: "Encourage support"
-    tags: ["support", "monetization", "appreciation"]
-
-  # =================================================================
-  # EDUCATIONAL CONTENT
-  # =================================================================
-  - name: "how_ai_works"
-    enabled: true
-    message: "How our AI works: Pattern recognition + machine learning + community feedback = smart moderation that gets better over time!"
-    interval_seconds: 3300  # 55 minutes
-    channels: []
-    platforms: []
-    description: "Explain AI technology"
-    tags: ["education", "ai", "technology"]
-    
-  - name: "false_positive_help"
-    enabled: true
-    message: "Got flagged incorrectly? Use !appeal <reason> to contest it! Our AI learns from mistakes and becomes more accurate"
-    interval_seconds: 3900  # 65 minutes
-    channels: []
-    platforms: []
-    description: "Help with false positives"
-    tags: ["help", "appeals", "accuracy"]
-
-  # =================================================================
-  # SPECIAL EVENTS AND SEASONAL
-  # =================================================================
-  - name: "weekly_stats"
-    enabled: false  # Enable manually for weekly showcases
-    message: "This week's AI stats: $(weekly_messages) messages processed, $(weekly_blocks) spam blocked, $(weekly_accuracy)% accuracy!"
-    interval_seconds: 604800  # Weekly
-    channels: []
-    platforms: []
-    description: "Weekly statistics showcase"
-    tags: ["stats", "weekly", "showcase"]
-    variables:
-      - "$(weekly_messages)"
-      - "$(weekly_blocks)"
-      - "$(weekly_accuracy)"
-    
-  - name: "filter_update"
-    enabled: false  # Enable when filters are updated
-    message: "Filter update deployed! New AI patterns added, accuracy improved by $(improvement)%! Community intelligence at work!"
-    interval_seconds: 86400  # Daily (when enabled)
-    channels: []
-    platforms: []
-    description: "Announce filter updates"
-    tags: ["updates", "improvements", "community"]
-    variables:
-      - "$(improvement)"
-
-  # =================================================================
-  # CHANNEL-SPECIFIC EXAMPLES
-  # =================================================================
-  - name: "gaming_specific"
-    enabled: false  # Enable for gaming streams
-    message: "Gaming stream protected by AI! No toxicity, no cheating discussions, no spam - just pure gaming fun! GG everyone!"
-    interval_seconds: 1800
-    channels: []
-    platforms: []
-    description: "Gaming stream specific"
-    tags: ["gaming", "anti-toxicity", "fun"]
-    
-  - name: "creative_stream"
-    enabled: false  # Enable for creative streams
-    message: "Creative stream with AI moderation! Share constructive feedback, ask questions about the process, stay positive!"
-    interval_seconds: 2400
-    channels: []
-    platforms: []
-    description: "Creative stream specific"
-    tags: ["creative", "constructive", "positive"]
-
-# Timer categories for easy management
+- name: ai_features
+  enabled: true
+  message: 'This stream is protected by NotaBot''s AI moderation! Features: Smart pattern detection, learning algorithms, real-time optimization'
+  interval_seconds: 900
+  channels: []
+  platforms: []
+  description: Showcase AI moderation features
+  tags:
+  - ai
+  - features
+  - promotion
+  variables: null
+- name: community_ai
+  enabled: true
+  message: Our AI learns from community feedback! Use !appeal if you think moderation made a mistake - it helps the AI improve!
+  interval_seconds: 1200
+  channels: []
+  platforms: []
+  description: Explain AI learning capabilities
+  tags:
+  - ai
+  - community
+  - education
+  variables: null
+- name: ai_vs_nightbot
+  enabled: true
+  message: 'Why NotaBot > NightBot: 10x faster response, AI pattern detection, automatic optimization, community filter sharing, 99.9% uptime!'
+  interval_seconds: 1800
+  channels: []
+  platforms: []
+  description: Compare NotaBot advantages
+  tags:
+  - comparison
+  - nightbot
+  - superiority
+  variables: null
+- name: twitch_ai_exclusive
+  enabled: true
+  message: 'Twitch Exclusive: Our AI detects even advanced evasion techniques! Leetspeak, Unicode tricks, homoglyphs - nothing gets past!'
+  interval_seconds: 1500
+  channels: []
+  platforms:
+  - twitch
+  description: Twitch-specific AI features
+  tags:
+  - twitch
+  - ai
+  - exclusive
+  variables: null
+- name: youtube_ai_exclusive
+  enabled: true
+  message: 'YouTube Exclusive: Cross-platform AI intelligence! Patterns learned on Twitch protect YouTube chat too!'
+  interval_seconds: 1500
+  channels: []
+  platforms:
+  - youtube
+  description: YouTube-specific AI features
+  tags:
+  - youtube
+  - ai
+  - cross-platform
+  variables: null
+- name: points_economy
+  enabled: true
+  message: Earn points by chatting and being positive! Check your balance with !points - spend them on rewards! Use !leaderboard to see top contributors
+  interval_seconds: 1800
+  channels: []
+  platforms: []
+  description: Explain points system
+  tags:
+  - points
+  - economy
+  - engagement
+  variables: null
 categories:
-  core:
-    - "ai_features"
-    - "community_ai"
-    - "ai_vs_nightbot"
-    - "filter_sharing"
-  
   platform_specific:
-    - "twitch_ai_exclusive" 
-    - "youtube_ai_exclusive"
-  
+  - twitch_ai_exclusive
+  - youtube_ai_exclusive
+  core:
+  - ai_features
+  - community_ai
+  - ai_vs_nightbot
   engagement:
-    - "points_economy"
-    - "achievements_system"
-    - "commands_help"
-  
-  promotional:
-    - "social_media"
-    - "support_stream"
-  
-  educational:
-    - "how_ai_works"
-    - "false_positive_help"
-  
-  special:
-    - "weekly_stats"
-    - "filter_update"
-  
-  stream_type:
-    - "gaming_specific"
-    - "creative_stream"
-
-# Variable definitions for replacement
+  - points_economy
 variables:
-  # Built-in variables (automatically replaced by bot)
   builtin:
-    - name: "$(timer)"
-      description: "Name of the current timer"
-      example: "ai_features"
-    
-    - name: "$(count)"
-      description: "Number of times this timer has triggered"
-      example: "42"
-    
-    - name: "$(platform)"
-      description: "Current platform name"
-      example: "twitch"
-    
-    - name: "$(channel)"
-      description: "Current channel name"
-      example: "awesome_streamer"
-    
-    - name: "$(user)"
-      description: "Channel owner/streamer name"
-      example: "awesome_streamer"
-
-  # Custom variables (set in .env or config)
+  - name: $(timer)
+    description: Name of the current timer
+    example: ai_features
+    default: null
+  - name: $(count)
+    description: Number of times this timer has triggered
+    example: '42'
+    default: null
+  - name: $(platform)
+    description: Current platform name
+    example: twitch
+    default: null
+  - name: $(channel)
+    description: Current channel name
+    example: awesome_streamer
+    default: null
   custom:
-    - name: "$(discord)"
-      description: "Discord server invite"
-      default: "discord.gg/yourserver"
-    
-    - name: "$(twitter)"
-      description: "Twitter handle"
-      default: "@yourhandle"
-    
-    - name: "$(youtube_channel)"
-      description: "YouTube channel URL"
-      default: "youtube.com/yourchannel"
-
-# Analytics tracking for timers
+  - name: $(discord)
+    description: Discord server invite
+    example: discord.gg/yourserver
+    default: discord.gg/yourserver
+  - name: $(twitter)
+    description: Twitter handle
+    example: '@yourhandle'
+    default: '@yourhandle'
 analytics:
   track_effectiveness: true
   track_engagement: true
-  track_click_through: false  # Future feature
-  
-# Timer rules and constraints
+  track_click_through: false
 rules:
   max_timers_per_channel: 20
   max_message_length: 500
   min_interval_seconds: 30
-  max_interval_seconds: 604800  # Weekly
-  
-  # Platform-specific rules
-  twitch:
-    max_message_length: 500
-    respect_slow_mode: true
-  
-  youtube:
-    max_message_length: 200
-    avoid_spam_detection: true
-
-# Conditional timer logic (future feature)
-conditions:
-  viewer_count:
-    min_for_promotional: 10  # Only show promo timers with 10+ viewers
-    max_for_educational: 100  # Skip educational timers with 100+ viewers
-  
-  time_based:
-    prime_time: "18:00-23:00"  # More frequent timers during prime time
-    quiet_hours: "02:00-08:00"  # Fewer timers during quiet hours
-
-# Metadata
-metadata:
-  total_timers: 16
-  enabled_timers: 12
-  platform_specific: 2
-  last_updated: "2025-07-16T03:43:28Z"
-  version_compatibility: ["2.0+"]
-  
-# Changelog
-changelog:
-  - version: "1.0"
-    date: "2025-07-16"
-    changes:
-      - "Initial timer configuration with AI focus"
-      - "Platform-specific timer support"
-      - "Variable substitution system"
-      - "Category organization"
-      - "Educational and promotional content"
-
-# Notes for administrators:
-# 1. Set enabled: false to disable specific timers
-# 2. Adjust interval_seconds for frequency (minimum 30 seconds)
-# 3. Use platforms: ["twitch"] for platform-specific timers
-# 4. Empty channels: [] means all channels for that platform
-# 5. Variables like $(channel) are automatically replaced
-# 6. Changes are detected automatically within 30 seconds
-# 7. Use tags for categorization and management
-# 8. Test new timers with short intervals first
-# 9. Consider viewer count and stream type when enabling timers
-# 10. Backup this file before making major changes
+  max_interval_seconds: 86400

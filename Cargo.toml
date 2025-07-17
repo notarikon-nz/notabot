@@ -9,7 +9,10 @@ keywords = ["twitch", "youtube", "chat", "moderation", "ai"]
 categories = ["multimedia", "web-programming"]
 
 [features]
-default = ["web"]
+default = ["adaptive_tuning"]
+adaptive_tuning = []
+prometheus_metrics = ["prometheus"]
+opentelemetry_metrics = ["opentelemetry"]
 web = ["axum", "tower", "tower-http"]
 
 [dependencies]
@@ -71,6 +74,11 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 thiserror = "1.0"
 
 rand = "0.9.1"
+
+num_cpus = "1.0"
+prometheus = { version = "0.14.0", optional = true}
+opentelemetry = { version = "0.30.0", optional = true }
+
 
 [lib]
 name = "notabot"

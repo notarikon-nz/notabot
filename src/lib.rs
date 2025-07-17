@@ -49,6 +49,7 @@ pub mod types;
 pub mod platforms;
 pub mod bot;
 pub mod config;
+pub mod adaptive;
 
 #[cfg(feature = "web")]
 pub mod web;
@@ -66,14 +67,17 @@ pub mod prelude {
         ModerationAction, UserMessageHistory, ExemptionLevel, ModerationEscalation,
         FilterConfigManager
     };
-    
+    pub use crate::adaptive::AdaptivePerformanceSystem;
+
+
     // Phase 2 exports
     pub use crate::bot::enhanced_moderation::EnhancedModerationSystem;
     pub use crate::bot::pattern_matching::{AdvancedPattern, EnhancedPatternMatcher};
     pub use crate::bot::smart_escalation::{SmartEscalation, ViolationSeverity, PositiveActionType};
     pub use crate::bot::realtime_analytics::{FilterAnalyticsSystem, UserReportType, ModeratorReviewType};
     pub use crate::bot::filter_import_export::{FilterImportExport, ExportFormat, ExportOptions, ImportOptions};
-    
+    pub use crate::config::{ConfigurationManager};
+
     #[cfg(feature = "web")]
     pub use crate::web::{WebDashboard, DashboardState};
     pub use anyhow::Result;
