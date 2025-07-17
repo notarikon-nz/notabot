@@ -152,121 +152,21 @@ cargo run --features web
 | **Safety Systems** | ✅ Multi-layer | ⚠️ Basic | ⚠️ Basic |
 | **ML Moderation** | ✅ Advanced | ❌ Rule-based | ❌ Rule-based |
 
-## Usage Examples
-
-### Basic Bot Setup
-```rust
-use notabot::prelude::*;
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let mut bot = ChatBot::new();
-    
-    // Add platforms
-    let twitch_config = TwitchConfig::from_env()?;
-    bot.add_connection(Box::new(TwitchConnection::new(twitch_config))).await;
-    
-    // Register commands
-    bot.add_command("hello", "Hello $(user)! 👋", false, 5).await;
-    bot.add_command("points", "You have $(points) points!", false, 10).await;
-    
-    // Configure spam protection
-    bot.add_spam_filter(SpamFilterType::ExcessiveCaps { max_percentage: 70 }).await?;
-    bot.add_spam_filter(SpamFilterType::RateLimit { max_messages: 5, window_seconds: 30 }).await?;
-    
-    // Add timers
-    bot.add_timer("social", "Follow us on Twitter @YourHandle! 🐦", 600).await?;
-    
-    // Start everything
-    bot.start().await?;
-    bot.start_web_dashboard(3000).await?;
-    
-    // Bot runs continuously with health monitoring
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        println!("Health: {:?}", bot.health_check().await);
-    }
-}
-```
-
-### Advanced Spam Protection
-```rust
-// Comprehensive moderation setup
-bot.add_spam_filter_advanced(
-    SpamFilterType::RepeatedMessages { max_repeats: 3, window_seconds: 300 },
-    1200, // 20 minute timeout
-    Some("Please don't repeat messages".to_string()),
-    true,  // mods exempt
-    false  // subscribers not exempt
-).await?;
-
-bot.add_spam_filter(SpamFilterType::LinkBlocking { 
-    allow_mods: true, 
-    whitelist: vec!["discord.gg".to_string(), "youtube.com".to_string()] 
-}).await?;
-```
-
-### Multi-Platform Timers
-```rust
-// Cross-platform announcements
-bot.add_timer("general", "Thanks for watching! 💜", 900).await?;
-
-// Platform-specific messages
-bot.add_timer_advanced(
-    "twitch_only",
-    "Twitch exclusive: Type !discord for our server!",
-    1200,
-    vec![], // All channels
-    vec!["twitch".to_string()] // Twitch only
-).await?;
-```
-
-## 🔌 Extending to New Platforms
-
-Adding new platforms is straightforward with our trait-based architecture:
-
-```rust
-pub struct DiscordConnection {
-    // Discord-specific fields
-}
-
-#[async_trait]
-impl PlatformConnection for DiscordConnection {
-    async fn connect(&mut self) -> Result<()> {
-        // Discord-specific connection logic
-    }
-
-    async fn send_message(&self, channel: &str, message: &str) -> Result<()> {
-        // Discord message sending
-    }
-
-    fn platform_name(&self) -> &str { "discord" }
-    // ... other trait methods
-}
-```
-
-## Roadmap
-
-### Version 1.3 (Current)
-- [x] Multi-platform support (Twitch + YouTube)
-- [x] Advanced points economy with achievements
-- [x] Intelligent spam protection with 7+ filters
-- [x] Real-time web dashboard with analytics
-- [x] Comprehensive command system with variables
-
-### Version 1.4 (Q2 2024)
+### Version 2.1
 - [ ] Discord integration
 - [ ] Song request system with Spotify/YouTube
 - [ ] Advanced user permission levels
-- [ ] Command aliases and parameters
-- [ ] Mobile dashboard app
 
-### Version 2.0 (Q4 2024)
-- [ ] Machine learning chat moderation
+### Version 2.2
+- [ ] Machine learning chat moderation (including sentiment analysis)
 - [ ] Voice command support
-- [ ] Distributed deployment for large streamers
 - [ ] Advanced analytics with predictions
+
+### Version 2.3
+- [ ] Mobile dashboard app
+- [ ] Integration with OBS Studio
 - [ ] Custom dashboard themes
+- [ ] Multilingual Support
 
 ## Contributing
 
