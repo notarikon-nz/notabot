@@ -88,7 +88,7 @@ impl ConnectionPoolAdaptive for ConnectionPool {
             let response_score = if avg_response_time > 0.0 { (1000.0 / avg_response_time).min(1.0) } else { 1.0 };
             let reliability_score = success_rate / 100.0;
             
-            (utilization_score * 0.3 + response_score * 0.4 + reliability_score * 0.3)
+            utilization_score * 0.3 + response_score * 0.4 + reliability_score * 0.3
         };
         
         Ok(ConnectionPoolMetrics {

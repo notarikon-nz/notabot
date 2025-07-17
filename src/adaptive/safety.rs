@@ -86,6 +86,26 @@ pub enum CircuitBreakerState {
     HalfOpen, // Testing if system has recovered
 }
 
+impl Default for SafetyStatus {
+    fn default() -> Self {
+        Self {
+            is_safe: true,
+            recent_changes: 0,
+            rollbacks_in_last_hour: 0,
+            circuit_breaker_state: CircuitBreakerState::Closed,
+            safety_score: 1.0,
+            warnings: Vec::new(),
+        }
+    }
+}
+
+// Also add Default for CircuitBreakerState if not already present
+impl Default for CircuitBreakerState {
+    fn default() -> Self {
+        CircuitBreakerState::Closed
+    }
+}
+
 impl SafetyManager {
     pub fn new(enabled: bool, max_changes_per_hour: u32, rollback_threshold_seconds: u64) -> Result<Self> {
         let mut manager = Self {

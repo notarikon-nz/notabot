@@ -1140,7 +1140,7 @@ mod tests {
             config_manager,
         ).await.unwrap();
         
-        assert_eq!(shutdown_manager.get_phase().await, ShutdownPhase::Running);
+        assert_eq!(shutdown_manager.get_phase().await, notabot::bot::shutdown::ShutdownPhase::Running);
         
         // Test manual shutdown trigger
         shutdown_manager.trigger_shutdown().await;

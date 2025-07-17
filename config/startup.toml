@@ -1,0 +1,122 @@
+# NotaBot Startup Configuration
+# This file contains all the runtime configuration parameters
+# Previously hardcoded in main.rs
+
+[application]
+name = "NotaBot"
+version = "2.0.0"
+log_level = "info"
+
+[dashboard]
+enabled = true
+port = 3000
+
+[monitoring]
+# How often to display general statistics
+stats_interval_seconds = 300
+# How often to display connection pool statistics  
+pool_health_check_interval_seconds = 300
+# How often to collect adaptive metrics
+adaptive_metrics_interval_seconds = 30
+# How often to collect moderation metrics
+moderation_metrics_interval_seconds = 60
+# How often to collect configuration metrics
+config_metrics_interval_seconds = 120
+# How often to force pool health checks
+pool_force_health_check_minutes = 5
+# How often to log heartbeat messages
+heartbeat_interval_seconds = 300
+
+[features]
+ai_moderation = true
+learning_mode = false
+adaptive_tuning = true
+connection_pooling = true
+graceful_shutdown = true
+web_dashboard = true
+enhanced_logging = true
+
+[connection_pool]
+max_connections_per_platform = 3
+min_idle_connections = 1
+max_idle_connections = 2
+connection_timeout_seconds = 30
+idle_timeout_seconds = 300
+health_check_interval_seconds = 60
+retry_attempts = 3
+retry_delay_seconds = 5
+
+[adaptive]
+enabled = true
+tuning_interval_seconds = 30
+metrics_retention_hours = 24
+safety_checks_enabled = true
+max_parameter_changes_per_hour = 10
+rollback_threshold_seconds = 300
+learning_mode = false
+
+[adaptive.strategies]
+[adaptive.strategies.latency_tuning]
+target_latency_ms = 100.0
+aggressive_threshold_ms = 500.0
+timeout_adjustment_factor = 1.2
+
+[adaptive.strategies.memory_tuning]
+target_memory_percent = 70.0
+critical_threshold_percent = 90.0
+cache_reduction_factor = 0.8
+
+[adaptive.strategies.error_rate_tuning]
+target_error_rate_percent = 1.0
+critical_error_rate_percent = 5.0
+retry_increase_factor = 1.5
+
+[message_processing]
+# Base sleep duration between message processing cycles
+base_sleep_ms = 100
+# Default batch size for message processing (can be overridden by adaptive system)
+default_batch_size = 10
+# Default response delay (can be overridden by adaptive system)
+default_response_delay_ms = 100
+# How many processing times to keep in memory
+max_processing_times_history = 100
+# When to drain old processing times
+processing_times_drain_threshold = 100
+processing_times_drain_count = 50
+
+[commands]
+# Default cooldowns for built-in commands (in seconds)
+hello_cooldown = 5
+uptime_cooldown = 30
+shutdown_cooldown = 300
+poolstats_cooldown = 30
+reloadconfig_cooldown = 60
+configstatus_cooldown = 30
+
+# Adaptive system command cooldowns
+adaptivestatus_cooldown = 30
+adaptivemetrics_cooldown = 30
+adaptivetune_cooldown = 300
+adaptiveparams_cooldown = 60
+adaptivehealth_cooldown = 60
+adaptivereset_cooldown = 600
+adaptivesafety_cooldown = 60
+adaptiverollback_cooldown = 600
+
+[performance]
+# Performance monitoring and optimization settings
+metrics_collection_enabled = true
+detailed_logging_enabled = false
+performance_warnings_enabled = true
+
+# Thresholds for performance warnings
+warning_latency_ms = 1000.0
+warning_memory_percent = 85.0
+warning_error_rate_percent = 3.0
+
+[storage]
+# Paths for various data storage
+adaptive_state_export_path = "data/adaptive_final_state.json"
+backup_directory = "data/backups"
+logs_directory = "logs"
+config_backup_retention_days = 30

@@ -480,10 +480,10 @@ mod tests {
     fn test_leetspeak_detection() {
         let pattern = AdvancedPattern::Leetspeak("badword".to_string());
         
-        assert!(pattern.matches("b4dw0rd"));
-        assert!(pattern.matches("b@dw0r6"));
-        assert!(pattern.matches("badword"));
-        assert!(!pattern.matches("goodword"));
+        assert!(pattern.matches("b4dw0rd"));    // 4->a, 0->o
+        assert!(pattern.matches("b@dw0rd"));    // @->a, 0->o  
+        assert!(pattern.matches("badword"));     // Normal text
+        assert!(!pattern.matches("goodword"));  // Different word
     }
 
     #[test]

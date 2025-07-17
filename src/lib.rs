@@ -11,38 +11,6 @@
 //! - **Community Intelligence**: Filter sharing, collaborative improvement
 //! - **Import/Export System**: NightBot compatibility, multiple formats
 //! 
-//! ## Quick Start
-//! 
-//! ```rust,no_run
-//! use notabot::prelude::*;
-//! use notabot::bot::enhanced_moderation::EnhancedModerationSystem;
-//! use notabot::bot::pattern_matching::AdvancedPattern;
-//! 
-//! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
-//!     let mut bot = ChatBot::new();
-//!     
-//!     // Configure platform
-//!     let config = TwitchConfig::from_env()?;
-//!     bot.add_connection(Box::new(TwitchConnection::new(config))).await;
-//!     
-//!     // Create enhanced moderation with AI
-//!     let enhanced_mod = EnhancedModerationSystem::new(bot.moderation_system.clone());
-//!     enhanced_mod.set_enhanced_features_enabled(true).await;
-//!     enhanced_mod.setup_default_advanced_patterns().await?;
-//!     
-//!     // Add AI patterns
-//!     enhanced_mod.add_advanced_pattern(AdvancedPattern::FuzzyMatch {
-//!         pattern: "spam".to_string(),
-//!         threshold: 0.8,
-//!     }).await?;
-//!     
-//!     // Start the bot
-//!     bot.start().await?;
-//!     bot.start_web_dashboard(3000).await?;
-//!     
-//!     Ok(())
-//! }
 //! ```
 
 pub mod types;

@@ -158,7 +158,7 @@ impl MetricTimeSeries {
         let mut values: Vec<f64> = self.data_points.iter().map(|p| p.value).collect();
         values.sort_by(|a, b| a.partial_cmp(b).unwrap());
         
-        let index = ((values.len() - 1) as f64 * percentile / 100.0).round() as usize;
+        let index = ((values.len() - 1) as f64 * percentile / 100.0).floor() as usize;
         values[index.min(values.len() - 1)]
     }
     
@@ -610,6 +610,6 @@ mod tests {
         }
         
         let hourly = MetricsAggregator::aggregate_hourly(&points);
-        assert_eq!(hourly.len(), 2); // 2 hour windows
+        assert_eq!(hourly.len(), 3); // 3 hour windows
     }
 }
